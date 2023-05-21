@@ -42,4 +42,5 @@ def test_openpose(in_channels):
 # test_vgg()
 # test_conv_triplet1(in_channels=128)
 # test_inner_block(in_channels=180, out_channels=52)
-test_openpose(in_channels=3)
+openpose = test_openpose(in_channels=3)
+# print(openpose)

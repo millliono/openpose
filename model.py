@@ -79,7 +79,7 @@ class inner_block(nn.Module):
         )
         self.conv6 = conv_block(
             in_channels=256,
-            out_channels=out_channels,  # check 52(the number of affinity vectors)
+            out_channels=out_channels,  # (the number of affinity vectors)
             use_relu=False,
             kernel_size=1,
         )
