@@ -1,8 +1,11 @@
 import torch
+import numpy as np
 from PIL import Image
 from torchvision import transforms
 from urllib import request
 import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter, maximum_filter
+from scipy.ndimage import generate_binary_structure
 
 import model
 
@@ -35,17 +38,31 @@ cnn.eval()
 if torch.cuda.is_available():
     input_batch = input_batch.to("cuda")
     cnn.to("cuda")
+
 with torch.no_grad():
     output_batch = cnn(input_batch)
 print(output_batch.shape)
 
 for output in output_batch:
-    part_aff = output[:52]
-    print(part_aff.shape)
-    conf_map = output[52:]
-    print(conf_map.shape)
+    part_affs = output[:52]
+    print(part_affs.shape)
+    heatmaps = output[52:]
+    print(heatmaps.shape)
 
     # i choose to continue with 28x28 size images and not the original size
     # but i think in pytorch implemetaton it resizes to original
+
+
+def get_peaks_from_heatmap(heatmap):
+    '''
+        input -> heatmap
+        output -> tuple(coordinates[[x,y]],[score], num_peaks)
+    '''
+    filtered = maximum_filter(heatmap, footprint=generate_binary_structure(2, 1))
+    peaks_of_heatmap = (filtered == heatmap) * (heatmap > 0.3)
+    peaks_coords = np.nonzero(peaks_of_heatmap)
+    peaks_scores = heatmap[peaks_coords]
+    num_peaks = len(peaks_coords[0])
+    return (np.array(peaks_coords).T, peaks_scores, num_peaks)
 
 

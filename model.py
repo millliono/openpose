@@ -64,7 +64,7 @@ class conv_triplet(nn.Module):
         )
 
 
-# inner part affinity and confidence map block
+# inner part affinity and heatmap map block
 class inner_block(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(inner_block, self).__init__()
@@ -105,8 +105,8 @@ class openpose(nn.Module):
         self.paf1 = inner_block(in_channels=180, out_channels=52)
         self.paf2 = inner_block(in_channels=180, out_channels=52)
 
-        self.cm0 = inner_block(in_channels=180, out_channels=26)
-        self.cm1 = inner_block(in_channels=206, out_channels=26)
+        self.htmp0 = inner_block(in_channels=180, out_channels=26)
+        self.htmp1 = inner_block(in_channels=206, out_channels=26)
 
     def forward(self, x):
         # backbone
@@ -127,10 +127,10 @@ class openpose(nn.Module):
         x = torch.cat([F, x], dim=1)
 
         # stage 3
-        x = self.cm0(x)
+        x = self.htmp0(x)
         x = torch.cat([F, PAF, x], dim=1)
 
         # stage 4
-        x = self.cm1(x)
+        x = self.htmp1(x)
 
         return torch.cat([PAF, x], dim=1)
