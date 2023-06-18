@@ -4,6 +4,14 @@ from PIL import Image
 from torchvision.datasets.vision import VisionDataset
 import utils
 
+"""
+    This is the coco keypoints dataset class. 
+    
+    keeps only images with keypoint annotations
+    filters out person annotations without keypoints
+
+    Returns:    dict of list
+"""
 
 class CocoKeypoints(VisionDataset):
     def __init__(
