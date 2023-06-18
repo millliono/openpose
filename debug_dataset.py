@@ -18,26 +18,19 @@ coco_dataset = coco_dataset.CocoKeypoints(
 sample = coco_dataset[100]
 image, annotations = sample
 
-# remove people without keypoints annotation
-annotations = [ann for ann in annotations if ann["num_keypoints"] > 0]
-
 num_annotations = len(annotations)
+annotations = utils.list_of_dicts_to_dict_of_lists(annotations)
 
-try:
-    annotations = utils.list_of_dicts_to_dict_of_lists(annotations)
-    keypoints = np.array(annotations["keypoints"]).reshape(num_annotations, 17, 3)
-    keypoints = torch.from_numpy(keypoints)
+keypoints = np.array(annotations["keypoints"]).reshape(num_annotations, 17, 3)
+keypoints = torch.from_numpy(keypoints)
 
-    res = utils.draw_keypoints(
-        F.pil_to_tensor(image),
-        keypoints,
-        connectivity=utils.connect_skeleton,
-        colors="blue",
-        radius=4,
-        width=3,
-    )
-    utils.show(res)
-    plt.show()
-except:
-    print("failed to show keypoints")
-    print(num_annotations, 'annotations')
+res = utils.draw_keypoints(
+    F.pil_to_tensor(image),
+    keypoints,
+    connectivity=utils.connect_skeleton,
+    colors="blue",
+    radius=4,
+    width=3,
+)
+utils.show(res)
+plt.show()
