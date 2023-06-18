@@ -15,12 +15,10 @@ coco_dataset = coco_dataset.CocoKeypoints(
     cat_nms='person'
 )
 
-sample = coco_dataset[100]
+sample = coco_dataset[0]
 image, annotations = sample
 
-num_annotations = len(annotations)
-annotations = utils.list_of_dicts_to_dict_of_lists(annotations)
-
+num_annotations = len(annotations["keypoints"])
 keypoints = np.array(annotations["keypoints"]).reshape(num_annotations, 17, 3)
 keypoints = torch.from_numpy(keypoints)
 
