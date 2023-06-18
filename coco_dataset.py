@@ -1,9 +1,10 @@
-from torchvision.datasets.vision import VisionDataset
-from typing import Any, Callable, List, Optional, Tuple
 import os.path
+from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
+from torchvision.datasets.vision import VisionDataset
 
-class CocoDetection(VisionDataset):
+
+class CocoKeypoints(VisionDataset):
     """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
 
     It requires the `COCO API to be installed <https://github.com/pdollar/coco/tree/master/PythonAPI>`_.
@@ -26,12 +27,13 @@ class CocoDetection(VisionDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
+        cat_nms="person",
     ) -> None:
         super().__init__(root, transforms, transform, target_transform)
         from pycocotools.coco import COCO
 
         self.coco = COCO(annFile)
-        self.ids = list(sorted(self.coco.imgs.keys()))
+        self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms=cat_nms))
 
     def _load_image(self, id: int) -> Image.Image:
         path = self.coco.loadImgs(id)[0]["file_name"]
