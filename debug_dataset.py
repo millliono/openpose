@@ -12,7 +12,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
     annFile=str(
         root / "annotations" / "annotations" / "person_keypoints_train2017.json"
     ),
-    cat_nms='person'
+    cat_nms="person",
 )
 
 sample = coco_dataset[0]
@@ -25,8 +25,10 @@ keypoints = torch.from_numpy(keypoints)
 res = utils.draw_keypoints(
     F.pil_to_tensor(image),
     keypoints,
+    visibility=[1,2],
     connectivity=utils.connect_skeleton,
-    colors="blue",
+    keypoint_color="blue",
+    line_color="yellow",
     radius=4,
     width=3,
 )
