@@ -1,6 +1,7 @@
 import os.path
 from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
+import torchvision
 from torchvision.datasets.vision import VisionDataset
 import utils
 import torch

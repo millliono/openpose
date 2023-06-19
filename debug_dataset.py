@@ -1,6 +1,5 @@
 import coco_dataset
 import pathlib
-import torch
 import utils
 import matplotlib.pyplot as plt
 from torchvision import transforms
