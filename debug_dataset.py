@@ -1,24 +1,21 @@
 import coco_dataset
 import pathlib
 import torch
-import numpy as np
 import utils
 import matplotlib.pyplot as plt
 from torchvision import transforms
 
 
-image_transform = torch.nn.Sequential(
-    transforms.Resize([224, 224]),
-)
-
-root = pathlib.Path("coco")
 coco_dataset = coco_dataset.CocoKeypoints(
-    root=str(root / "images" / "train2017"),
+    root=str(pathlib.Path("coco") / "images" / "train2017"),
     annFile=str(
-        root / "annotations" / "annotations" / "person_keypoints_train2017.json"
+        pathlib.Path("coco")
+        / "annotations"
+        / "annotations"
+        / "person_keypoints_train2017.json"
     ),
-    transform=image_transform,
-    resize_keypoints=[224, 224],
+    transform=transforms.Resize([224, 224]),
+    resize_keypoints_to=[224, 224],
 )
 
 sample = coco_dataset[0]

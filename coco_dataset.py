@@ -23,13 +23,13 @@ class CocoKeypoints(VisionDataset):
         annFile: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        resize_keypoints=(224, 224),
+        resize_keypoints_to=(224, 224),
     ) -> None:
         super().__init__(root, transform=transform, target_transform=target_transform)
         from pycocotools.coco import COCO
 
         self.coco = COCO(annFile)
-        self.resize_keypoints = resize_keypoints
+        self.resize_keypoints_to = resize_keypoints_to
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
 
         # retrieve images with person keypoint annotations
@@ -49,7 +49,7 @@ class CocoKeypoints(VisionDataset):
 
     def tf_resize_keypoints(self, keypoints, orig_image_size):
         # this is a transform that resizes keypoints after an image resizing transform
-        target_size = self.resize_keypoints
+        target_size = self.resize_keypoints_to
         width_resize = target_size[0] / orig_image_size[0]
         height_resize = target_size[1] / orig_image_size[1]
         resized_keypoints = keypoints * np.array([width_resize, height_resize, 1])
