@@ -3,6 +3,8 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.datasets.vision import VisionDataset
 import utils
+import torch
+import numpy as np
 
 """
     This is the coco keypoints dataset class. 
@@ -13,6 +15,7 @@ import utils
     Returns:    dict of list
 """
 
+
 class CocoKeypoints(VisionDataset):
     def __init__(
         self,
@@ -20,14 +23,14 @@ class CocoKeypoints(VisionDataset):
         annFile: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        transforms: Optional[Callable] = None,
-        cat_nms="person",
+        resize_keypoints=(224, 224),
     ) -> None:
-        super().__init__(root, transforms, transform, target_transform)
+        super().__init__(root, transform=transform, target_transform=target_transform)
         from pycocotools.coco import COCO
 
         self.coco = COCO(annFile)
-        self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms=cat_nms))
+        self.resize_keypoints = resize_keypoints
+        self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
 
         # retrieve images with person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -44,16 +47,31 @@ class CocoKeypoints(VisionDataset):
         keypoint_anns = [tar for tar in target if tar["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
+    def tf_resize_keypoints(self, keypoints, orig_image_size):
+        # this is a transform that resizes keypoints after an image resizing transform
+        target_size = self.resize_keypoints
+        width_resize = target_size[0] / orig_image_size[0]
+        height_resize = target_size[1] / orig_image_size[1]
+        resized_keypoints = keypoints * np.array([width_resize, height_resize, 1])
+        return resized_keypoints
+
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
+
         image = self._load_image(id)
+        orig_image_size = image.size
+        if self.transform is not None:
+            image = self.transform(image)
+
         target = self._load_target(id)
         target = utils.list_of_dicts_to_dict_of_lists(target)
+        num_targets = len(target["keypoints"])
 
-        if self.transforms is not None:
-            image, target = self.transforms(image, target)
+        keypoints = np.array(target["keypoints"]).reshape(num_targets, 17, 3)
+        keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
+        keypoints = torch.from_numpy(keypoints)
 
-        return image, target
+        return image, keypoints
 
     def __len__(self) -> int:
         return len(self.ids)
