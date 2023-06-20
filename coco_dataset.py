@@ -10,7 +10,7 @@ import numpy as np
     This is the coco keypoints dataset class. 
     
     keeps only images with keypoint annotations
-    filters out person annotations without keypoints
+    keeps people annotations without keypoints when other keypoint annoted people exist
 
     Returns:    dict of list
 """
