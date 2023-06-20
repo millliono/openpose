@@ -9,7 +9,7 @@ def get_image():
     def create_gaussian_array(size, center, std_dev):
         x, y = np.meshgrid(np.arange(size), np.arange(size))
         dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        gaussian = np.exp(-0.5 * (dist / std_dev) ** 2)
+        gaussian = np.exp(-((dist / std_dev) ** 2))
         return gaussian
 
     size = 28
@@ -118,7 +118,8 @@ def get_connections(paf, peaks_a, peaks_b):
                     break
     return connections
 
-class coco_part():
+
+class coco_part:
     nose = 0
     neck = 1
     r_shoulder = 2
@@ -138,4 +139,3 @@ class coco_part():
     r_ear = 16
     l_ear = 17
     background = 18
-

@@ -1,7 +1,6 @@
 import os.path
 from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
-import torchvision
 from torchvision.datasets.vision import VisionDataset
 import utils
 import torch
@@ -57,6 +56,11 @@ class CocoKeypoints(VisionDataset):
         return resized_keypoints
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+            returns: 
+                PIL image
+                numpy array keypoints
+        """
         id = self.ids[index]
 
         image = self._load_image(id)
@@ -70,7 +74,6 @@ class CocoKeypoints(VisionDataset):
 
         keypoints = np.array(target["keypoints"]).reshape(num_targets, 17, 3)
         keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
-        keypoints = torch.from_numpy(keypoints)
 
         return image, keypoints
 

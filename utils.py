@@ -16,7 +16,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
     return dict(dict_of_lists)
 
 
-def show(imgs):
+def show1(imgs):
     if not isinstance(imgs, list):
         imgs = [imgs]
     fig, axs = plt.subplots(ncols=len(imgs), squeeze=False)
@@ -25,6 +25,34 @@ def show(imgs):
         img = F.to_pil_image(img)
         axs[0, i].imshow(np.asarray(img))
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+
+
+def show2(image_list):
+    num_images = len(image_list)
+    num_cols = 4  
+    num_rows = (num_images - 1) // num_cols + 1  
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 9))
+
+    if num_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif num_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for i, image in enumerate(image_list):
+        row_idx = i // num_cols
+        col_idx = i % num_cols
+        axes[row_idx, col_idx].imshow(image)
+        axes[row_idx, col_idx].axis('off')
+
+    plt.tight_layout()
+
+
+
+
+
+
+
 
 
 @torch.no_grad()
