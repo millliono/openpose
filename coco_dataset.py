@@ -70,9 +70,8 @@ class CocoKeypoints(VisionDataset):
 
         target = self._load_target(id)
         target = utils.list_of_dicts_to_dict_of_lists(target)
-        num_targets = len(target["keypoints"])
 
-        keypoints = np.array(target["keypoints"]).reshape(num_targets, 17, 3)
+        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
         keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
 
         return image, keypoints
