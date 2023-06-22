@@ -57,16 +57,12 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
         if temp:
             heatmaps.append(np.maximum.reduce(temp))
         else:
-            heatmaps.append(np.zeros((224,224)))
+            heatmaps.append(np.zeros((224, 224)))
 
     return heatmaps
-    # utils.show2(heatmaps)
-    # plt.show()
-gg = get_heatmaps(keypoints)
 
 
-
-def get_paf(person, size=224):
+def get_paf_locations(person, visibility, limb, size=224):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
     if part1_vis and part2_vis in visibility:
@@ -86,24 +82,27 @@ def get_paf(person, size=224):
         l_thresh = v_magn
         cond1 = np.where((temp >= 0) & (temp <= l_thresh), temp, 0)
 
+        s_thresh = 2
         v_norm_orth = [v_norm[1], -v_norm[0]]
         res = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size, size))
-        cond2 = np.where((res >= 0) & (res <= l_thresh), res, 0)
+        cond2 = np.where((res >= 0) & (res <= s_thresh), res, 0)
 
         cond3 = np.where((cond1 > 0) & (cond2 > 0), 1, 0)
+        return cond3
+    else:
+        return np.zeros((224, 224))
 
-    return cond3
+
+def get_pafs(keypoints):
+    visibility = [1, 2]
+    pafs = []
+    for limb in utils.connect_skeleton:
+        ans = [get_paf_locations(person, visibility, limb) for person in keypoints]
+        paf = np.add.reduce(ans)
+        pafs.append(paf)
+    return pafs
 
 
-visibility = [1, 2]
-pafs = []
-for limb in utils.connect_skeleton:
-    ans = [
-        get_paf(person)
-        for person in keypoints
-        if person[limb[0]][2] in visibility and person[limb[1]][2] in visibility
-    ]
-    paf = np.add.reduce(ans)
-    pafs.append(paf)
 
-print("hi")
+utils.show3(image, get_heatmaps(keypoints), get_pafs(keypoints))
+plt.show()
