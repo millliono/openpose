@@ -1,6 +1,6 @@
 import coco_dataset
 import pathlib
-import utils
+import show_utils
 import matplotlib.pyplot as plt
 from torchvision import transforms
 import numpy as np
@@ -22,20 +22,14 @@ coco_dataset = coco_dataset.CocoKeypoints(
 sample = coco_dataset[6]
 image, keypoints = sample
 
-# res = utils.draw_keypoints(
-#     transforms.functional.pil_to_tensor(image),
-#     torch.from_numpy(keypoints),
-#     visibility=[1, 2],
-#     connectivity=utils.connect_skeleton,
-#     keypoint_color="blue",
-#     line_color="yellow",
-#     radius=2,
-#     width=2,
-# )
-# utils.show1(res)
-# plt.show()
-
-keypoints = keypoints.tolist()
+res = show_utils.draw_keypoints(
+    transforms.functional.pil_to_tensor(image),
+    torch.tensor(keypoints),
+    visibility=[1, 2],
+    connectivity=show_utils.connect_skeleton,
+)
+show_utils.show1(res)
+plt.show()
 
 
 def get_heatmaps(keypoints, visibility=[1, 2]):
@@ -45,7 +39,7 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
             [person[part] for person in keypoints if person[part][2] in visibility]
         )
 
-    def get_gaussian(center, sigma, size=224):
+    def get_gaussian(center, sigma=1, size=224):
         x, y = np.meshgrid(np.arange(size), np.arange(size))
         dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         gaussian = np.exp(-((dist / sigma) ** 2))
@@ -53,7 +47,7 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
 
     heatmaps = []
     for t in parts_coords:
-        temp = [get_gaussian((kpt[0], kpt[1]), sigma=1) for kpt in t]
+        temp = [get_gaussian((kpt[0], kpt[1])) for kpt in t]
         if temp:
             heatmaps.append(np.maximum.reduce(temp))
         else:
@@ -96,7 +90,7 @@ def get_paf_locations(person, visibility, limb, size=224):
 def get_pafs(keypoints):
     visibility = [1, 2]
     pafs = []
-    for limb in utils.connect_skeleton:
+    for limb in show_utils.connect_skeleton:
         ans = [get_paf_locations(person, visibility, limb) for person in keypoints]
         paf = np.add.reduce(ans)
         pafs.append(paf)
@@ -104,5 +98,5 @@ def get_pafs(keypoints):
 
 
 
-utils.show3(image, get_heatmaps(keypoints), get_pafs(keypoints))
+show_utils.show3(image, get_heatmaps(keypoints), get_pafs(keypoints))
 plt.show()

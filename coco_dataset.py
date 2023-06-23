@@ -2,9 +2,9 @@ import os.path
 from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 from torchvision.datasets.vision import VisionDataset
-import utils
-import torch
 import numpy as np
+from collections import defaultdict
+
 
 """
     This is the coco keypoints dataset class. 
@@ -32,7 +32,7 @@ class CocoKeypoints(VisionDataset):
         self.resize_keypoints_to = resize_keypoints_to
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
 
-        # retrieve images with person keypoint annotations
+        # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
 
     def _load_image(self, id: int) -> Image.Image:
@@ -55,11 +55,18 @@ class CocoKeypoints(VisionDataset):
         resized_keypoints = keypoints * np.array([width_resize, height_resize, 1])
         return resized_keypoints
 
+    def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
+        dict_of_lists = defaultdict(list)
+        for dct in list_of_dicts:
+            for key, value in dct.items():
+                dict_of_lists[key].append(value)
+        return dict(dict_of_lists)
+
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
-            returns: 
-                PIL image
-                numpy array keypoints
+        returns:
+            PIL image
+            numpy array keypoints
         """
         id = self.ids[index]
 
@@ -69,10 +76,11 @@ class CocoKeypoints(VisionDataset):
             image = self.transform(image)
 
         target = self._load_target(id)
-        target = utils.list_of_dicts_to_dict_of_lists(target)
+        target = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
         keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
+        keypoints = keypoints.tolist()
 
         return image, keypoints
 
