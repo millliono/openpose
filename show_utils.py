@@ -19,11 +19,11 @@ def show1(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
-def show2(target):
+def show_heatmaps(heatmaps):
     """
-    shows all (17) heatmap or paf channels using subplots
+    shows all (17) heatmap points using subplots
     """
-    num_images = len(target)
+    num_images = len(heatmaps)
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
@@ -34,10 +34,35 @@ def show2(target):
     elif num_cols == 1:
         axes = axes.reshape(-1, 1)
 
-    for i, image in enumerate(target):
+    for i, htmp in enumerate(heatmaps):
         row_idx = i // num_cols
         col_idx = i % num_cols
-        axes[row_idx, col_idx].imshow(image)
+        axes[row_idx, col_idx].imshow(htmp)
+        axes[row_idx, col_idx].axis("off")
+
+    plt.tight_layout()
+
+
+def show_pafs(pafs):
+    """
+    shows all (16) pafs as vector fields using subplots
+    """
+    num_images = len(pafs)
+    num_cols = 4
+    num_rows = (num_images - 1) // num_cols + 1
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 9))
+
+    if num_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif num_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for i, paf in enumerate(pafs):
+        px, py = np.meshgrid(np.arange(224), np.arange(224))        
+        row_idx = i // num_cols
+        col_idx = i % num_cols
+        axes[row_idx, col_idx].quiver(px, py, paf[0], paf[1], scale=30)
         axes[row_idx, col_idx].axis("off")
 
     plt.tight_layout()

@@ -57,7 +57,7 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
     return heatmaps
 
 
-def get_paf_locations(person, visibility, limb, size=224):
+def get_limb_pafs(person, visibility, limb, size=224):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
     if part1_vis and part2_vis in visibility:
@@ -69,35 +69,40 @@ def get_paf_locations(person, visibility, limb, size=224):
 
         px, py = np.meshgrid(np.arange(size), np.arange(size))
 
-        pixel_x = px.flatten() - part1[0]
-        pixel_y = py.flatten() - part1[1]
-        vec_xp = [pixel_x, pixel_y]
+        xp_x = px.flatten() - part1[0]
+        xp_y = py.flatten() - part1[1]
+        vec_xp = [xp_x, xp_y]
 
-        temp = np.dot(v_norm, vec_xp).reshape(size, size)
         l_thresh = v_magn
-        cond1 = np.where((temp >= 0) & (temp <= l_thresh), temp, 0)
+        temp = np.dot(v_norm, vec_xp).reshape(size, size)
+        cond1 = np.where((temp >= 0) & (temp <= l_thresh), 1, 0)
 
         s_thresh = 2
         v_norm_orth = [v_norm[1], -v_norm[0]]
         res = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size, size))
-        cond2 = np.where((res >= 0) & (res <= s_thresh), res, 0)
+        cond2 = np.where(res <= s_thresh, 1, 0)
 
-        cond3 = np.where((cond1 > 0) & (cond2 > 0), 1, 0)
-        return cond3
+        paf_locs = np.where((cond1 > 0) & (cond2 > 0), 1, 0)
+
+        pafs_x = np.where(paf_locs > 0, v_norm[0], 0)
+        pafs_y = np.where(paf_locs > 0, v_norm[1], 0)
+
+        return np.stack([pafs_x, pafs_y], axis=0)
     else:
-        return np.zeros((224, 224))
+        return np.zeros((2, 224, 224))
 
 
 def get_pafs(keypoints):
     visibility = [1, 2]
     pafs = []
     for limb in common.connect_skeleton:
-        ans = [get_paf_locations(person, visibility, limb) for person in keypoints]
-        paf = np.add.reduce(ans)
-        pafs.append(paf)
+        limb_paf = [get_limb_pafs(person, visibility, limb) for person in keypoints]
+        limb_paf = np.add.reduce(limb_paf)
+        pafs.append(limb_paf)
     return pafs
 
-
-
+pafs = get_pafs(keypoints)
+show_utils.show_pafs(pafs)
+plt.show()
 show_utils.show3(image, get_heatmaps(keypoints), get_pafs(keypoints))
 plt.show()
