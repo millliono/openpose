@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 import numpy as np
 import torch
+import common
 
 
 coco_dataset = coco_dataset.CocoKeypoints(
@@ -26,7 +27,7 @@ res = show_utils.draw_keypoints(
     transforms.functional.pil_to_tensor(image),
     torch.tensor(keypoints),
     visibility=[1, 2],
-    connectivity=show_utils.connect_skeleton,
+    connectivity=common.connect_skeleton,
 )
 show_utils.show1(res)
 plt.show()
@@ -46,8 +47,8 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
         return gaussian
 
     heatmaps = []
-    for t in parts_coords:
-        temp = [get_gaussian((kpt[0], kpt[1])) for kpt in t]
+    for part in parts_coords:
+        temp = [get_gaussian((kpt[0], kpt[1])) for kpt in part]
         if temp:
             heatmaps.append(np.maximum.reduce(temp))
         else:
@@ -90,7 +91,7 @@ def get_paf_locations(person, visibility, limb, size=224):
 def get_pafs(keypoints):
     visibility = [1, 2]
     pafs = []
-    for limb in show_utils.connect_skeleton:
+    for limb in common.connect_skeleton:
         ans = [get_paf_locations(person, visibility, limb) for person in keypoints]
         paf = np.add.reduce(ans)
         pafs.append(paf)
