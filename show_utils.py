@@ -19,6 +19,7 @@ def show1(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
+
 def show_heatmaps(heatmaps):
     """
     shows all (17) heatmap points using subplots
