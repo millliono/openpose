@@ -69,7 +69,7 @@ def get_limb_pafs(person, visibility, limb, size=224):
         temp = np.dot(v_norm, vec_xp).reshape(size, size)
         cond1 = np.where((temp >= 0) & (temp <= l_thresh), 1, 0)
 
-        s_thresh = 2 # TODO: find correct parameter
+        s_thresh = 1 # TODO: find correct parameter
         v_norm_orth = [v_norm[1], -v_norm[0]]
         res = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size, size))
         cond2 = np.where(res <= s_thresh, 1, 0)
@@ -95,10 +95,10 @@ def get_pafs(keypoints, visibility=[1,2]):
 pafs = get_pafs(keypoints)
 heatmaps = get_heatmaps(keypoints)
 
-plt.figure()
-show_utils.show_pafs_combined(pafs)
-plt.figure()
-show_utils.show_heatmaps_combined(heatmaps)
+# plt.figure()
+# show_utils.show_pafs_combined(pafs)
+# plt.figure()
+# show_utils.show_heatmaps_combined(heatmaps)
 plt.figure()
 show_utils.show_pafs_quiver_combined(pafs)
 # show_utils.show_pafs(pafs)
