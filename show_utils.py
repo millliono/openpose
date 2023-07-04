@@ -49,6 +49,16 @@ def show_heatmaps(heatmaps):
     show_subplots(heatmaps)
 
 
+
+def show_heatmaps_combined(heatmaps):
+    """
+    shows image with all heatmaps stacked
+    """
+    htmp = np.add.reduce(heatmaps)
+    plt.imshow(htmp)
+
+
+
 def show_pafs(pafs):
     """
     shows all (16) pafs in two figues (x_ccord, y_coord)
@@ -58,6 +68,16 @@ def show_pafs(pafs):
     paf_y = [x[1] for x in pafs]
     show_subplots(paf_x)
     show_subplots(paf_y)
+
+
+def show_pafs_combined(pafs):
+    """
+    shows image with all paf vectors positions stacked.
+    """
+    paf_x = [x[0] for x in pafs]
+    paf_pos = np.add.reduce(paf_x)
+    paf_pos = np.where(paf_pos != 0, 1, 0)
+    plt.imshow(paf_pos)
 
 
 def show_pafs_quiver(pafs):
@@ -92,26 +112,9 @@ def show_pafs_quiver_combined(pafs):
     paf_x = np.add.reduce(paf_x)
     paf_y = np.add.reduce(paf_y)
 
-    px, py = np.meshgrid(np.arange(0,224), np.arange(0,224)[::-1])
+    px, py = np.meshgrid(np.arange(0,224), np.arange(0,224)[::-1]) # THIS IS WRONG
     plt.quiver(px, py, paf_x, -paf_y, scale=50)
 
-
-def show_heatmaps_combined(heatmaps):
-    """
-    shows image with all heatmaps stacked
-    """
-    htmp = np.add.reduce(heatmaps)
-    plt.imshow(htmp)
-
-
-def show_pafs_combined(pafs):
-    """
-    shows image with all paf vectors positions stacked.
-    """
-    paf_x = [x[0] for x in pafs]
-    paf_pos = np.add.reduce(paf_x)
-    paf_pos = np.where(paf_pos != 0, 1, 0)
-    plt.imshow(paf_pos)
 
 
 def show_annotated(image, keypoints):
