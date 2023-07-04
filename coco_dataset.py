@@ -12,7 +12,8 @@ from collections import defaultdict
     keeps only images with keypoint annotations
     keeps people annotations without keypoints when other keypoint annoted people exist
 
-    Returns:    dict of list
+    Returns:    image: pil iamge
+                keypoints: list with keypoints
 """
 
 

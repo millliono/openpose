@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import torchvision.transforms.functional as F
 import numpy as np
 from PIL import Image, ImageColor, ImageDraw, ImageFont
+from torchvision import transforms
+import common
 
 
 def show1(imgs):
@@ -19,12 +21,8 @@ def show1(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
-
-def show_heatmaps(heatmaps):
-    """
-    shows all (17) heatmap points using subplots
-    """
-    num_images = len(heatmaps)
+def show_subplots(img):
+    num_images = len(img)
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
@@ -35,7 +33,7 @@ def show_heatmaps(heatmaps):
     elif num_cols == 1:
         axes = axes.reshape(-1, 1)
 
-    for i, htmp in enumerate(heatmaps):
+    for i, htmp in enumerate(img):
         row_idx = i // num_cols
         col_idx = i % num_cols
         axes[row_idx, col_idx].imshow(htmp)
@@ -44,7 +42,25 @@ def show_heatmaps(heatmaps):
     plt.tight_layout()
 
 
+def show_heatmaps(heatmaps):
+    """
+    shows all (17) heatmap points using subplots
+    """
+    show_subplots(heatmaps)
+
+
 def show_pafs(pafs):
+    """
+    shows all (16) pafs in two figues (x_ccord, y_coord)
+    using subplots
+    """
+    paf_x = [x[0] for x in pafs]
+    paf_y = [x[1] for x in pafs]
+    show_subplots(paf_x)
+    show_subplots(paf_y)
+
+
+def show_pafs_quiver(pafs):
     """
     shows all (16) pafs as vector fields using subplots
     """
@@ -60,7 +76,7 @@ def show_pafs(pafs):
         axes = axes.reshape(-1, 1)
 
     for i, paf in enumerate(pafs):
-        px, py = np.meshgrid(np.arange(224), np.arange(224))        
+        px, py = np.meshgrid(np.arange(224), np.arange(224))
         row_idx = i // num_cols
         col_idx = i % num_cols
         axes[row_idx, col_idx].quiver(px, py, paf[0], paf[1], scale=30)
@@ -69,21 +85,43 @@ def show_pafs(pafs):
     plt.tight_layout()
 
 
-def show3(image1, heatmaps, pafs):
+def show_pafs_quiver_combined(pafs):
+    paf_x = [x[0] for x in pafs]
+    paf_y = [x[1] for x in pafs]
+
+    paf_x = np.add.reduce(paf_x)
+    paf_y = np.add.reduce(paf_y)
+
+    px, py = np.meshgrid(np.arange(224), np.arange(224))
+    plt.quiver(px, py, paf_x, paf_y, scale=30)
+
+
+def show_heatmaps_combined(heatmaps):
     """
-    shows image with all heatmaps and all pafs stacked
+    shows image with all heatmaps stacked
     """
-    plt.imshow(image1)
+    htmp = np.add.reduce(heatmaps)
+    plt.imshow(htmp)
 
-    alpha = 0.2
-    image2 = np.add.reduce(heatmaps)
-    plt.imshow(image2, cmap="gray", alpha=alpha)
 
-    image3 = np.add.reduce(pafs)
-    plt.imshow(image3, cmap="viridis", alpha=alpha)
+def show_pafs_combined(pafs):
+    """
+    shows image with all paf vectors positions stacked.
+    """
+    paf_x = [x[0] for x in pafs]
+    paf_pos = np.add.reduce(paf_x)
+    paf_pos = np.where(paf_pos != 0, 1, 0)
+    plt.imshow(paf_pos)
 
-    plt.show()
 
+def show_annotated(image, keypoints):
+    res = draw_keypoints(
+        transforms.functional.pil_to_tensor(image),
+        torch.tensor(keypoints),
+        visibility=[1, 2],
+        connectivity=common.connect_skeleton,
+    )
+    show1(res)
 
 @torch.no_grad()
 def draw_keypoints(
@@ -156,4 +194,3 @@ def draw_keypoints(
     return (
         torch.from_numpy(np.array(img_to_draw)).permute(2, 0, 1).to(dtype=torch.uint8)
     )
-

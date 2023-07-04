@@ -23,15 +23,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
 sample = coco_dataset[6]
 image, keypoints = sample
 
-res = show_utils.draw_keypoints(
-    transforms.functional.pil_to_tensor(image),
-    torch.tensor(keypoints),
-    visibility=[1, 2],
-    connectivity=common.connect_skeleton,
-)
-show_utils.show1(res)
-plt.show()
-
+show_utils.show_annotated(image, keypoints)
 
 def get_heatmaps(keypoints, visibility=[1, 2]):
     parts_coords = []
@@ -50,7 +42,7 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
     for part in parts_coords:
         temp = [get_gaussian((kpt[0], kpt[1])) for kpt in part]
         if temp:
-            heatmaps.append(np.maximum.reduce(temp))
+            heatmaps.append(np.maximum.reduce(temp)) # paper says take max
         else:
             heatmaps.append(np.zeros((224, 224)))
 
@@ -77,7 +69,7 @@ def get_limb_pafs(person, visibility, limb, size=224):
         temp = np.dot(v_norm, vec_xp).reshape(size, size)
         cond1 = np.where((temp >= 0) & (temp <= l_thresh), 1, 0)
 
-        s_thresh = 2
+        s_thresh = 2 # TODO: find correct parameter
         v_norm_orth = [v_norm[1], -v_norm[0]]
         res = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size, size))
         cond2 = np.where(res <= s_thresh, 1, 0)
@@ -92,17 +84,24 @@ def get_limb_pafs(person, visibility, limb, size=224):
         return np.zeros((2, 224, 224))
 
 
-def get_pafs(keypoints):
-    visibility = [1, 2]
+def get_pafs(keypoints, visibility=[1,2]):
     pafs = []
     for limb in common.connect_skeleton:
         limb_paf = [get_limb_pafs(person, visibility, limb) for person in keypoints]
-        limb_paf = np.add.reduce(limb_paf)
+        limb_paf = np.add.reduce(limb_paf) # TODO: paper says take the average
         pafs.append(limb_paf)
     return pafs
 
 pafs = get_pafs(keypoints)
-show_utils.show_pafs(pafs)
-plt.show()
-show_utils.show3(image, get_heatmaps(keypoints), get_pafs(keypoints))
+heatmaps = get_heatmaps(keypoints)
+
+plt.figure()
+show_utils.show_pafs_combined(pafs)
+plt.figure()
+show_utils.show_heatmaps_combined(heatmaps)
+plt.figure()
+show_utils.show_pafs_quiver_combined(pafs)
+# show_utils.show_pafs(pafs)
+# show_utils.show_heatmaps(heatmaps)
+
 plt.show()
