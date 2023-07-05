@@ -96,12 +96,18 @@ pafs = get_pafs(keypoints)
 heatmaps = get_heatmaps(keypoints)
 
 # plt.figure()
-# show_utils.show_pafs_combined(pafs)
-# plt.figure()
 # show_utils.show_heatmaps_combined(heatmaps)
+
+# plt.figure()
+# show_utils.show_pafs_combined(pafs)
+
 plt.figure()
 show_utils.show_pafs_quiver_combined(pafs)
-# show_utils.show_pafs(pafs)
+
+
 # show_utils.show_heatmaps(heatmaps)
+# show_utils.show_pafs(pafs)
+
+show_utils.show_pafs_quiver(pafs)
 
 plt.show()
