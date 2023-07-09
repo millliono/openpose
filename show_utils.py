@@ -112,8 +112,8 @@ def show_pafs_quiver_combined(pafs):
     paf_x = np.add.reduce(paf_x)
     paf_y = np.add.reduce(paf_y)
 
-    px, py = np.meshgrid(np.arange(0,224), np.arange(0,224)[::-1]) # THIS IS WRONG
-    plt.quiver(px, py, paf_x, -paf_y, scale=50)
+    px, py = np.meshgrid(np.arange(0,224), np.arange(0,224), indexing="ij")
+    plt.quiver(px, py, paf_x, paf_y, scale=50)
 
 
 
