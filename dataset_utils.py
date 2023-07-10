@@ -1,14 +1,26 @@
 import numpy as np
 import common
 
+def tf_resize_keypoints(keypoints, orig_size=[224,224], new_size=[48,48]):
+    # this is a transform that resizes keypoints after an image resizing transform
+    target_size = new_size
+    width_resize = target_size[0] / orig_size[0]
+    height_resize = target_size[1] / orig_size[1]
+    resized_keypoints = keypoints * np.array([width_resize, height_resize, 1])
+    return resized_keypoints
+
+
 def get_heatmaps(keypoints, visibility=[1, 2]):
+
+    keypoints = tf_resize_keypoints(keypoints)
+
     parts_coords = []
     for part in range(17):
         parts_coords.append(
             [person[part] for person in keypoints if person[part][2] in visibility]
         )
 
-    def get_gaussian(center, sigma=1, size=224):
+    def get_gaussian(center, sigma=1, size=48):
         x, y = np.meshgrid(np.arange(size), np.arange(size), indexing="ij") # IJ
         dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         gaussian = np.exp(-((dist / sigma) ** 2))
@@ -20,12 +32,12 @@ def get_heatmaps(keypoints, visibility=[1, 2]):
         if temp:
             heatmaps.append(np.maximum.reduce(temp)) # paper says take max
         else:
-            heatmaps.append(np.zeros((224, 224)))
+            heatmaps.append(np.zeros((48, 48)))
 
     return heatmaps
 
 
-def get_limb_pafs(person, visibility, limb, size=224):
+def get_limb_pafs(person, visibility, limb, size=48):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
     if part1_vis and part2_vis in visibility:
@@ -57,10 +69,14 @@ def get_limb_pafs(person, visibility, limb, size=224):
 
         return np.stack([pafs_x, pafs_y], axis=0)
     else:
-        return np.zeros((2, 224, 224))
+        return np.zeros((2, 48, 48))
 
 
 def get_pafs(keypoints, visibility=[1,2]):
+
+    keypoints = tf_resize_keypoints(keypoints)
+
+
     pafs = []
     for limb in common.connect_skeleton:
         limb_paf = [get_limb_pafs(person, visibility, limb) for person in keypoints]
