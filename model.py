@@ -150,14 +150,15 @@ class openpose(nn.Module):
 
         # stage 3
         x = self.paf3(x)
-        PAF = x.clone()
+        PAFS = x.clone()
         x = torch.cat([F, x], dim=1)
 
         # stage 4
         x = self.htmp0(x)
-        x = torch.cat([F, PAF, x], dim=1)
+        x = torch.cat([F, PAFS, x], dim=1)
 
         # stage 5
         x = self.htmp1(x)
+        HEATMAPS = x
 
-        return torch.cat([PAF, x], dim=1)
+        return torch.cat([PAFS, HEATMAPS], dim=1)
