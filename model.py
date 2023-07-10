@@ -25,28 +25,28 @@ class conv_block(nn.Module):
 
 
 class conv_triplet(nn.Module):
-    def __init__(self, in_channels, **kwargs):
+    def __init__(self, in_channels_0, out_channels_indiv, **kwargs):
         super(conv_triplet, self).__init__()
 
         self.conv0 = conv_block(
-            in_channels,
-            out_channels=96,
+            in_channels_0,
+            out_channels=out_channels_indiv,
             use_relu=True,
             kernel_size=3,
             stride=1,
             padding=1,
         )
         self.conv1 = conv_block(
-            in_channels=96,
-            out_channels=96,
+            in_channels=out_channels_indiv,
+            out_channels=out_channels_indiv,
             use_relu=True,
             kernel_size=3,
             stride=1,
             padding=1,
         )
         self.conv2 = conv_block(
-            in_channels=96,
-            out_channels=96,
+            in_channels=out_channels_indiv,
+            out_channels=out_channels_indiv,
             use_relu=True,
             kernel_size=3,
             stride=1,
@@ -66,32 +66,42 @@ class conv_triplet(nn.Module):
 
 # inner part affinity and heatmap map block
 class inner_block(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels_indiv, conv6, conv7):
         super(inner_block, self).__init__()
 
-        self.conv_triplet0 = conv_triplet(in_channels=in_channels)
-        self.conv_triplet1 = conv_triplet(in_channels=288)
-        self.conv_triplet2 = conv_triplet(in_channels=288)
-        self.conv_triplet3 = conv_triplet(in_channels=288)
-        self.conv_triplet4 = conv_triplet(in_channels=288)
-        self.conv5 = conv_block(
-            in_channels=288, out_channels=256, use_relu=True, kernel_size=1
+        self.conv_triplet1 = conv_triplet(
+            in_channels_0=in_channels, out_channels_indiv=out_channels_indiv
+        )
+        self.conv_triplet2 = conv_triplet(
+            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
+        )
+        self.conv_triplet3 = conv_triplet(
+            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
+        )
+        self.conv_triplet4 = conv_triplet(
+            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
+        )
+        self.conv_triplet5 = conv_triplet(
+            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
         )
         self.conv6 = conv_block(
-            in_channels=256,
-            out_channels=out_channels,  # (the number of affinity vectors)
+            in_channels=conv6[0], out_channels=conv6[1], use_relu=True, kernel_size=1
+        )
+        self.conv7 = conv_block(
+            in_channels=conv7[0],
+            out_channels=conv7[1],  # (the number of affinity vectors)
             use_relu=False,
             kernel_size=1,
         )
 
     def forward(self, x):
-        x = self.conv_triplet0(x)
         x = self.conv_triplet1(x)
         x = self.conv_triplet2(x)
         x = self.conv_triplet3(x)
         x = self.conv_triplet4(x)
-        x = self.conv5(x)
+        x = self.conv_triplet5(x)
         x = self.conv6(x)
+        x = self.conv7(x)
         return x
 
 
@@ -101,12 +111,25 @@ class openpose(nn.Module):
 
         self.backbone = backbone.vgg(in_channels=in_channels)
 
-        self.paf0 = inner_block(in_channels=128, out_channels=52)
-        self.paf1 = inner_block(in_channels=180, out_channels=52)
-        self.paf2 = inner_block(in_channels=180, out_channels=52)
+        self.paf0 = inner_block(
+            in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 52]
+        )
+        self.paf1 = inner_block(
+            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+        )
+        self.paf2 = inner_block(
+            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+        )
+        self.paf3 = inner_block(
+            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+        )
 
-        self.htmp0 = inner_block(in_channels=180, out_channels=26)
-        self.htmp1 = inner_block(in_channels=206, out_channels=26)
+        self.htmp0 = inner_block(
+            in_channels=180, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 26]
+        )
+        self.htmp1 = inner_block(
+            in_channels=206, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 26]
+        )
 
     def forward(self, x):
         # backbone
@@ -123,14 +146,18 @@ class openpose(nn.Module):
 
         # stage 2
         x = self.paf2(x)
-        PAF = x.clone()
         x = torch.cat([F, x], dim=1)
 
         # stage 3
+        x = self.paf3(x)
+        PAF = x.clone()
+        x = torch.cat([F, x], dim=1)
+
+        # stage 4
         x = self.htmp0(x)
         x = torch.cat([F, PAF, x], dim=1)
 
-        # stage 4
+        # stage 5
         x = self.htmp1(x)
 
         return torch.cat([PAF, x], dim=1)

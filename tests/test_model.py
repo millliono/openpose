@@ -23,7 +23,7 @@ def test_conv_triplet(in_channels):
 
 
 def test_inner_block(in_channels, out_channels):
-    mdl = model.inner_block(in_channels=in_channels, out_channels=out_channels)
+    mdl = model.inner_block(in_channels=in_channels, out_channels_indiv=out_channels)
     x = torch.randn(3, in_channels, 28, 28)
     out = mdl(x)
     # assert out.shape == torch.Size([3, 52, 28, 28])
