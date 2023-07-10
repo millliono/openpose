@@ -133,7 +133,8 @@ class openpose(nn.Module):
 
     def forward(self, x):
 
-        save_for_loss = []
+        save_for_loss_pafs = []
+        save_for_loss_htmps = []
 
         # backbone
         x = self.backbone(x)
@@ -141,27 +142,33 @@ class openpose(nn.Module):
 
         # stage 0
         x = self.paf0(x)
+        save_for_loss_pafs.append(x.clone())
         x = torch.cat([F, x], dim=1)
 
         # stage 1
         x = self.paf1(x)
+        save_for_loss_pafs.append(x.clone())
         x = torch.cat([F, x], dim=1)
 
         # stage 2
         x = self.paf2(x)
+        save_for_loss_pafs.append(x.clone())
         x = torch.cat([F, x], dim=1)
 
         # stage 3
         x = self.paf3(x)
+        save_for_loss_pafs.append(x.clone())
         PAFS = x.clone()
         x = torch.cat([F, x], dim=1)
 
         # stage 4
         x = self.htmp0(x)
+        save_for_loss_htmps.append(x.clone())
         x = torch.cat([F, PAFS, x], dim=1)
 
         # stage 5
         x = self.htmp1(x)
+        save_for_loss_htmps.append(x.clone())
         HEATMAPS = x.clone()
 
-        return torch.cat([PAFS, HEATMAPS], dim=1)
+        return torch.cat([PAFS, HEATMAPS], dim=1), save_for_loss_pafs, save_for_loss_htmps
