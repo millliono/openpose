@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class Loss(nn.Module):
+class PoseLoss(nn.Module):
     def __init__(self):
         super().__init__()
         self.mse = nn.MSELoss()
@@ -20,7 +20,7 @@ class Loss(nn.Module):
 
 
 if __name__ == "__main__":
-    loss = Loss()
+    loss = PoseLoss()
 
     import model
 
