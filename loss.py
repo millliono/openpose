@@ -20,10 +20,9 @@ class PoseLoss(nn.Module):
 
 
 if __name__ == "__main__":
-    loss = PoseLoss()
-
     import model
 
+    loss = PoseLoss()
     model = model.openpose(in_channels=3)
     inp = torch.randn(1, 3, 224, 224)
 
