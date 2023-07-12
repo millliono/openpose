@@ -24,10 +24,10 @@ if __name__ == "__main__":
 
     import model
 
-    mdl = model.openpose(in_channels=3)
+    model = model.openpose(in_channels=3)
     inp = torch.randn(1, 3, 224, 224)
 
-    out, save_for_loss_pafs, save_for_loss_htmps = mdl(inp)
+    out, save_for_loss_pafs, save_for_loss_htmps = model(inp)
     ls = loss(
         save_for_loss_pafs,
         save_for_loss_htmps,
