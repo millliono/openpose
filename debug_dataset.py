@@ -22,15 +22,12 @@ coco_dataset = coco_dataset.CocoKeypoints(
 )
 
 sample = coco_dataset[6]
-image, keypoints = sample
+image, pafs, heatmaps, keypoints = sample
 
 show_utils.show_annotated(image, keypoints)
 
-pafs = dataset_utils.get_pafs(keypoints)
-heatmaps = dataset_utils.get_heatmaps(keypoints)
-
-plt.figure()
-show_utils.show_heatmaps_combined(heatmaps)
+# plt.figure()
+# show_utils.show_heatmaps_combined(heatmaps)
 
 # plt.figure()
 # show_utils.show_pafs_combined(pafs)

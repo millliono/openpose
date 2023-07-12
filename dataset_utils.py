@@ -79,5 +79,6 @@ def get_pafs(keypoints, visibility=[1, 2]):
     for limb in common.connect_skeleton:
         limb_paf = [get_limb_pafs(person, visibility, limb) for person in keypoints]
         limb_paf = np.add.reduce(limb_paf)  # TODO: paper says take the average
-        pafs.append(limb_paf)
+        pafs.append(limb_paf[0])
+        pafs.append(limb_paf[1])
     return pafs

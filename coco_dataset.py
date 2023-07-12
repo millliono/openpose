@@ -4,7 +4,9 @@ from PIL import Image
 from torchvision.datasets.vision import VisionDataset
 import numpy as np
 from collections import defaultdict
-
+import dataset_utils
+import torchvision.transforms.functional as fcn
+import torch
 
 """
     This is the coco keypoints dataset class. 
@@ -83,7 +85,21 @@ class CocoKeypoints(VisionDataset):
         keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
         keypoints = keypoints.tolist()
 
-        return image, keypoints
+        #
+        # HERE paf & heatmaps is list of numpy arrays, NOT TENSORS
+        #
+        pafs = dataset_utils.get_pafs(keypoints)
+        heatmaps = dataset_utils.get_heatmaps(keypoints)
+
+        #
+        # example converted to TENSOR
+        #
+        image = fcn.pil_to_tensor(image)
+        pafs = torch.tensor(np.array(pafs))
+        heatmaps = torch.tensor(np.array(heatmaps))
+
+
+        return image, pafs, heatmaps, keypoints
 
     def __len__(self) -> int:
         return len(self.ids)
