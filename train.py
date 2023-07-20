@@ -6,11 +6,12 @@ from model import openpose
 from loss import PoseLoss
 from torch.utils.data import DataLoader
 from coco_dataset import CocoKeypoints
-
+import torchvision.transforms.functional as fcn
+import numpy as np
 
 # Hyperparameters etc.
 LEARNING_RATE = 2e-5
-DEVICE = "cuda" if torch.cuda.is_available else "cpu"
+# DEVICE = "cuda" if torch.cuda.is_available else "cpu"
 BATCH_SIZE = 1
 WEIGHT_DECAY = 0
 EPOCHS = 1000
@@ -19,15 +20,16 @@ PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-
 def train_fn(train_loader, model, optimizer, loss_fn):
     loop = tqdm(train_loader, leave=True)
     mean_loss = []
 
-    for batch_idx, (x, y) in enumerate(loop):
-        x, y = x.to(DEVICE), y.to(DEVICE)
-        out = model(x)
-        loss = loss_fn(out, y)
+    for batch_idx, (image, pafs, heatmaps, keypoints) in enumerate(loop):
+        
+        out, save_for_loss_pafs, save_for_loss_htmps = model(image)
+        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, pafs, heatmaps)
+        print(f"Batch-({batch_idx}) loss was {loss}")
+
         mean_loss.append(loss.item())
         optimizer.zero_grad()
         loss.backward()

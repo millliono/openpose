@@ -95,6 +95,7 @@ class CocoKeypoints(VisionDataset):
         # example converted to TENSOR
         #
         image = fcn.pil_to_tensor(image)
+        image = fcn.convert_image_dtype(image, torch.float)
         pafs = torch.tensor(np.array(pafs))
         heatmaps = torch.tensor(np.array(heatmaps))
 

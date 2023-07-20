@@ -35,7 +35,7 @@ def test_openpose(in_channels):
     x = torch.randn(3, 3, 224, 224)
     out = mdl(x)
     # assert out.shape == torch.Size([3, 78, 28, 28])
-    print(f"openpose: ", out.shape)
+    print(f"openpose: ", out[0].shape)
     return mdl
 
 
