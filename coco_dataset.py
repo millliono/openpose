@@ -96,8 +96,8 @@ class CocoKeypoints(VisionDataset):
         #
         image = fcn.pil_to_tensor(image)
         image = fcn.convert_image_dtype(image, torch.float)
-        pafs = torch.tensor(np.array(pafs))
-        heatmaps = torch.tensor(np.array(heatmaps))
+        pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
+        heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
 
 
         return image, pafs, heatmaps, keypoints

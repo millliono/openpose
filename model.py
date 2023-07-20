@@ -112,23 +112,23 @@ class openpose(nn.Module):
         self.backbone = backbone.vgg(in_channels=in_channels)
 
         self.paf0 = inner_block(
-            in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 52]
+            in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 32]
         )
         self.paf1 = inner_block(
-            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
         )
         self.paf2 = inner_block(
-            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
         )
         self.paf3 = inner_block(
-            in_channels=180, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 52]
+            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
         )
 
         self.htmp0 = inner_block(
-            in_channels=180, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 26]
+            in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 17]
         )
         self.htmp1 = inner_block(
-            in_channels=206, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 26]
+            in_channels=177, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 17]
         )
 
     def forward(self, x):
