@@ -98,9 +98,10 @@ class CocoKeypoints(VisionDataset):
         image = fcn.convert_image_dtype(image, torch.float)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
+        keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
 
-        return image, pafs, heatmaps, keypoints
+        return image, pafs, heatmaps, # keypoints
 
     def __len__(self) -> int:
         return len(self.ids)

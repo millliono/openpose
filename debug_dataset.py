@@ -21,10 +21,10 @@ coco_dataset = coco_dataset.CocoKeypoints(
     resize_keypoints_to=[224, 224],
 )
 
-sample = coco_dataset[6]
-image, pafs, heatmaps, keypoints = sample
+sample = coco_dataset[0]
+image, pafs, heatmaps, keypoints = sample # TODO: doesnt work because kptns not returned anymore
 
-show_utils.show_annotated(image, keypoints)
+show_utils.show_annotated(image, keypoints) 
 
 # plt.figure()
 # show_utils.show_heatmaps_combined(heatmaps)

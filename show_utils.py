@@ -130,8 +130,8 @@ def show_pafs_quiver_combined(pafs):
 
 def show_annotated(image, keypoints):
     res = draw_keypoints(
-        image,
-        torch.tensor(keypoints),
+        F.convert_image_dtype(image, torch.uint8),
+        keypoints,
         visibility=[1, 2],
         connectivity=common.connect_skeleton,
     )

@@ -12,7 +12,7 @@ import numpy as np
 # Hyperparameters etc.
 LEARNING_RATE = 2e-5
 # DEVICE = "cuda" if torch.cuda.is_available else "cpu"
-BATCH_SIZE = 1
+BATCH_SIZE = 5
 WEIGHT_DECAY = 0
 EPOCHS = 1000
 NUM_WORKERS = 2
@@ -24,8 +24,7 @@ def train_fn(train_loader, model, optimizer, loss_fn):
     loop = tqdm(train_loader, leave=True)
     mean_loss = []
 
-    for batch_idx, (image, pafs, heatmaps, keypoints) in enumerate(loop):
-        
+    for batch_idx, (image, pafs, heatmaps) in enumerate(loop):
         out, save_for_loss_pafs, save_for_loss_htmps = model(image)
         loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, pafs, heatmaps)
         print(f"Batch-({batch_idx}) loss was {loss}")
@@ -41,8 +40,17 @@ def train_fn(train_loader, model, optimizer, loss_fn):
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
+def collate_fn(batch):
+    images = torch.utils.data.dataloader.default_collate([b[0] for b in batch])
+    pafs = torch.utils.data.dataloader.default_collate([b[1] for b in batch])
+    heatmaps = torch.utils.data.dataloader.default_collate([b[2] for b in batch])
+
+    return images, pafs, heatmaps
+
+
 def main():
     model = openpose(in_channels=3)
+    model.train()
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
@@ -65,9 +73,10 @@ def main():
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY, # ?
-        shuffle=True,
+        pin_memory=PIN_MEMORY,  # ?
+        shuffle=False,
         drop_last=True,
+        collate_fn=collate_fn,
     )
     for epoch in range(EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fn)
