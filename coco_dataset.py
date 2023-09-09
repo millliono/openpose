@@ -81,15 +81,16 @@ class CocoKeypoints(VisionDataset):
         target = self._load_target(id)
         target = self.list_of_dicts_to_dict_of_lists(target)
 
-        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
+        # block converts list to ndarray and back. efficient?
+        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)  
         keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
         keypoints = keypoints.tolist()
 
         #
         # HERE paf & heatmaps is list of numpy arrays, NOT TENSORS
         #
-        pafs = dataset_utils.get_pafs(keypoints)
         heatmaps = dataset_utils.get_heatmaps(keypoints)
+        pafs = dataset_utils.get_pafs(keypoints)
 
         #
         # example converted to TENSOR
@@ -101,7 +102,7 @@ class CocoKeypoints(VisionDataset):
         keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
 
-        return image, pafs, heatmaps, # keypoints
+        return image, pafs, heatmaps, keypoints
 
     def __len__(self) -> int:
         return len(self.ids)

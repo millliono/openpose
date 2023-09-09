@@ -37,7 +37,6 @@ def show_subplots(img):
         row_idx = i // num_cols
         col_idx = i % num_cols
         axes[row_idx, col_idx].imshow(htmp)
-        axes[row_idx, col_idx].axis("off")
 
     plt.tight_layout()
 
@@ -106,8 +105,8 @@ def show_pafs_quiver(pafs):
         px, py = np.meshgrid(np.arange(28), np.arange(28))
         row_idx = i // num_cols
         col_idx = i % num_cols
-        axes[row_idx, col_idx].quiver(px, py, paf_x[i], paf_y[i], scale=30)
-        axes[row_idx, col_idx].axis("off")
+        axes[row_idx, col_idx].quiver(px, py, paf_x[i], paf_y[i], scale=1, scale_units='xy', angles='xy', pivot='tail')
+        axes[row_idx, col_idx].invert_yaxis()
 
     plt.tight_layout()
 
@@ -124,8 +123,9 @@ def show_pafs_quiver_combined(pafs):
     paf_x = torch.sum(torch.stack(paf_x), dim=0)
     paf_y = torch.sum(torch.stack(paf_y), dim=0)
 
-    px, py = np.meshgrid(np.arange(0, 28), np.arange(0, 28), indexing="ij")
-    plt.quiver(px, py, paf_x, paf_y, scale=50)
+    px, py = np.meshgrid(np.arange(28), np.arange(28))
+    plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units='xy', angles='xy', pivot='tail')
+    plt.gca().invert_yaxis()
 
 
 def show_annotated(image, keypoints):

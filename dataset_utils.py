@@ -21,14 +21,14 @@ def get_heatmaps(keypoints, visibility=[1, 2], size=28):
         )
 
     def get_gaussian(center, sigma=1, size=size):
-        x, y = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")  # IJ
+        x, y = np.meshgrid(np.arange(size), np.arange(size), indexing="xy")
         dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         gaussian = np.exp(-((dist / sigma) ** 2))
         return gaussian
 
     heatmaps = []
     for part in parts_coords:
-        temp = [get_gaussian(np.flip((kpt[0], kpt[1]))) for kpt in part]  # FLIP HERE
+        temp = [get_gaussian((kpt[0], kpt[1])) for kpt in part] 
         if temp:
             heatmaps.append(np.maximum.reduce(temp))  # paper says take max
         else:
@@ -41,13 +41,13 @@ def get_limb_pafs(person, visibility, limb, size=28):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
     if part1_vis and part2_vis in visibility:
-        part1 = np.flip([person[limb[0]][0], person[limb[0]][1]])  # FLIP HERE
-        part2 = np.flip([person[limb[1]][0], person[limb[1]][1]])  # FLIP HERE
+        part1 = np.array([person[limb[0]][0], person[limb[0]][1]]) 
+        part2 = np.array([person[limb[1]][0], person[limb[1]][1]])  
         v = part2 - part1
         v_magn = np.sqrt(v[0] ** 2 + v[1] ** 2) + 1e-8
         v_norm = v / v_magn
 
-        px, py = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")  # IJ
+        px, py = np.meshgrid(np.arange(size), np.arange(size)) 
 
         xp_x = px.flatten() - part1[0]
         xp_y = py.flatten() - part1[1]
@@ -72,12 +72,12 @@ def get_limb_pafs(person, visibility, limb, size=28):
         return np.zeros((2, size, size))
 
 
-def get_pafs(keypoints, visibility=[1, 2]):
-    keypoints = tf_resize_keypoints(keypoints)
+def get_pafs(keypoints, visibility=[1, 2], size=28):
+    keypoints = tf_resize_keypoints(keypoints, new_size=[size, size])
 
     pafs = []
     for limb in common.connect_skeleton:
-        limb_paf = [get_limb_pafs(person, visibility, limb) for person in keypoints]
+        limb_paf = [get_limb_pafs(person, visibility, limb, size) for person in keypoints]
         limb_paf = np.add.reduce(limb_paf)  # TODO: paper says take the average
         pafs.append(limb_paf[0])
         pafs.append(limb_paf[1])
