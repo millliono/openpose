@@ -138,37 +138,37 @@ class openpose(nn.Module):
 
         # backbone
         x = self.backbone(x)
-        F = x.clone()
+        F = x
 
         # stage 0
         x = self.paf0(x)
-        save_for_loss_pafs.append(x.clone())
+        save_for_loss_pafs.append(x) 
         x = torch.cat([F, x], dim=1)
 
         # stage 1
         x = self.paf1(x)
-        save_for_loss_pafs.append(x.clone())
+        save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 2
         x = self.paf2(x)
-        save_for_loss_pafs.append(x.clone())
+        save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 3
         x = self.paf3(x)
-        save_for_loss_pafs.append(x.clone())
-        PAFS = x.clone()
+        save_for_loss_pafs.append(x)
+        PAFS = x
         x = torch.cat([F, x], dim=1)
 
         # stage 4
         x = self.htmp0(x)
-        save_for_loss_htmps.append(x.clone())
+        save_for_loss_htmps.append(x)
         x = torch.cat([F, PAFS, x], dim=1)
 
         # stage 5
         x = self.htmp1(x)
-        save_for_loss_htmps.append(x.clone())
-        HEATMAPS = x.clone()
+        save_for_loss_htmps.append(x)
+        HEATMAPS = x
 
         return torch.cat([PAFS, HEATMAPS], dim=1), save_for_loss_pafs, save_for_loss_htmps
