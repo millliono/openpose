@@ -11,25 +11,26 @@ import numpy as np
 
 # Hyperparameters etc.
 LEARNING_RATE = 1e-2
-DEVICE = "cuda" if torch.cuda.is_available else "cpu"
-BATCH_SIZE = 16
+BATCH_SIZE = 2
 WEIGHT_DECAY = 0
 EPOCHS = 1
-NUM_WORKERS = 16
+NUM_WORKERS = 2
 PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-def train_fn(train_loader, model, optimizer, loss_fn):
+def train_fn(train_loader, model, optimizer, loss_fn, device):
     loop = tqdm(train_loader, leave=True)
     mean_loss = []
 
-    for batch_idx, (image, pafs, heatmaps) in enumerate(loop):
-        image = image.to(DEVICE)
-        pafs = pafs.to(DEVICE)
-        heatmaps = heatmaps.to(DEVICE)
-        out, save_for_loss_pafs, save_for_loss_htmps = model(image)
-        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, pafs, heatmaps)
+    for batch_idx, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+        image = image.to(device)
+        targ_pafs = targ_pafs.to(device)
+        targ_heatmaps = targ_heatmaps.to(device)
+
+        pred_pafs, pred_htmps, save_for_loss_pafs, save_for_loss_htmps = model(image)
+        
+        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
         print(f"Batch-({batch_idx}) loss was {loss}")
 
         mean_loss.append(loss.item())
@@ -52,7 +53,10 @@ def collate_fn(batch):
 
 
 def main():
-    model = openpose(in_channels=3).to(DEVICE)
+    device = "cuda" if torch.cuda.is_available else "cpu"
+    device = "cpu"  # comment when using modern gpu
+
+    model = openpose(in_channels=3).to(device)
     model.train()
 
     optimizer = torch.optim.Adam(
@@ -82,7 +86,7 @@ def main():
         collate_fn=collate_fn,
     )
     for epoch in range(EPOCHS):
-        train_fn(train_loader, model, optimizer, loss_fn)
+        train_fn(train_loader, model, optimizer, loss_fn, device)
 
     torch.save(model.state_dict(), "save_model.pth")
     print("Saved openpose to save_model.pth")
