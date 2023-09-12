@@ -10,7 +10,7 @@ import torchvision.transforms.functional as fcn
 import numpy as np
 
 # Hyperparameters etc.
-LEARNING_RATE = 2e-5
+LEARNING_RATE = 1e-2
 # DEVICE = "cuda" if torch.cuda.is_available else "cpu"
 BATCH_SIZE = 5
 WEIGHT_DECAY = 0
@@ -58,9 +58,9 @@ def main():
     loss_fn = PoseLoss()
 
     train_dataset = CocoKeypoints(
-        root=str(pathlib.Path("coco") / "images" / "train2017"),
+        root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(
-            pathlib.Path("coco")
+            pathlib.Path("../coco")
             / "annotations"
             / "annotations"
             / "person_keypoints_train2017.json"
