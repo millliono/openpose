@@ -11,11 +11,11 @@ import numpy as np
 
 # Hyperparameters etc.
 LEARNING_RATE = 1e-2
-# DEVICE = "cuda" if torch.cuda.is_available else "cpu"
-BATCH_SIZE = 5
+DEVICE = "cuda" if torch.cuda.is_available else "cpu"
+BATCH_SIZE = 16
 WEIGHT_DECAY = 0
-EPOCHS = 1000
-NUM_WORKERS = 2
+EPOCHS = 1
+NUM_WORKERS = 16
 PIN_MEMORY = True
 LOAD_MODEL = False
 
@@ -25,6 +25,9 @@ def train_fn(train_loader, model, optimizer, loss_fn):
     mean_loss = []
 
     for batch_idx, (image, pafs, heatmaps) in enumerate(loop):
+        image = image.to(DEVICE)
+        pafs = pafs.to(DEVICE)
+        heatmaps = heatmaps.to(DEVICE)
         out, save_for_loss_pafs, save_for_loss_htmps = model(image)
         loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, pafs, heatmaps)
         print(f"Batch-({batch_idx}) loss was {loss}")
@@ -49,7 +52,7 @@ def collate_fn(batch):
 
 
 def main():
-    model = openpose(in_channels=3)
+    model = openpose(in_channels=3).to(DEVICE)
     model.train()
 
     optimizer = torch.optim.Adam(
@@ -80,6 +83,9 @@ def main():
     )
     for epoch in range(EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fn)
+
+    torch.save(model.state_dict(), "save_model.pth")
+    print("Saved openpose to save_model.pth")
 
 
 if __name__ == "__main__":
