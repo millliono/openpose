@@ -26,13 +26,11 @@ class CocoKeypoints(VisionDataset):
         annFile: str,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        resize_keypoints_to=(224, 224),
     ) -> None:
         super().__init__(root, transform=transform, target_transform=target_transform)
         from pycocotools.coco import COCO
 
         self.coco = COCO(annFile)
-        self.resize_keypoints_to = resize_keypoints_to
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
 
         # only retrieve images that have person keypoint annotations
@@ -50,12 +48,11 @@ class CocoKeypoints(VisionDataset):
         keypoint_anns = [tar for tar in target if tar["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
-    def tf_resize_keypoints(self, keypoints, orig_image_size):
+    def tf_resize_keypoints(self, keypoints, prev_size, new_size):
         # this is a transform that resizes keypoints after an image resizing transform
-        target_size = self.resize_keypoints_to
-        width_resize = target_size[0] / orig_image_size[0]
-        height_resize = target_size[1] / orig_image_size[1]
-        resized_keypoints = keypoints * np.array([width_resize, height_resize, 1])
+        scale_x = new_size[0] / prev_size[0]
+        scale_y = new_size[1] / prev_size[1]
+        resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
         return resized_keypoints
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
@@ -74,35 +71,37 @@ class CocoKeypoints(VisionDataset):
         id = self.ids[index]
 
         image = self._load_image(id)
-        orig_image_size = image.size
+        prev_size = image.size
         if self.transform is not None:
             image = self.transform(image)
+        new_size = image.size
+        targ_size = (new_size[0] // 8, new_size[1] // 8)
 
         target = self._load_target(id)
         target = self.list_of_dicts_to_dict_of_lists(target)
 
-        # block converts list to ndarray and back. efficient?
-        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)  
-        keypoints = self.tf_resize_keypoints(keypoints, orig_image_size)
+        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
+        keypoints = self.tf_resize_keypoints(keypoints, prev_size, targ_size)
         keypoints = keypoints.tolist()
 
         #
-        # HERE paf & heatmaps is list of numpy arrays, NOT TENSORS
+        # HERE paf & heatmaps is list of numpy arrays
         #
-        heatmaps = dataset_utils.get_heatmaps(keypoints)
-        pafs = dataset_utils.get_pafs(keypoints)
+        heatmaps = dataset_utils.get_heatmaps(
+            keypoints, size=targ_size, visibility=[1, 2]
+        )
+        pafs = dataset_utils.get_pafs(keypoints, size=targ_size, visibility=[1, 2])
 
         #
-        # example converted to TENSOR
+        # targets converted to TENSOR
         #
         image = fcn.pil_to_tensor(image)
-        image = fcn.convert_image_dtype(image, torch.float)
+        image = fcn.convert_image_dtype(image, torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
-
-        return image, pafs, heatmaps#, keypoints
+        return image, pafs, heatmaps, keypoints, targ_size
 
     def __len__(self) -> int:
         return len(self.ids)

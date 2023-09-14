@@ -10,11 +10,11 @@ import torchvision.transforms.functional as fcn
 import numpy as np
 
 # Hyperparameters etc.
-LEARNING_RATE = 1e-2
-BATCH_SIZE = 2
+LEARNING_RATE = 2e-4
+BATCH_SIZE = 16
 WEIGHT_DECAY = 0
 EPOCHS = 1
-NUM_WORKERS = 2
+NUM_WORKERS = 16
 PIN_MEMORY = True
 LOAD_MODEL = False
 
@@ -29,8 +29,10 @@ def train_fn(train_loader, model, optimizer, loss_fn, device):
         targ_heatmaps = targ_heatmaps.to(device)
 
         pred_pafs, pred_htmps, save_for_loss_pafs, save_for_loss_htmps = model(image)
-        
-        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
+
+        loss = loss_fn(
+            save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps
+        )
         print(f"Batch-({batch_idx}) loss was {loss}")
 
         mean_loss.append(loss.item())
@@ -72,8 +74,7 @@ def main():
             / "annotations"
             / "person_keypoints_train2017.json"
         ),
-        transform=transforms.Resize([224, 224]),
-        resize_keypoints_to=[224, 224],
+        transform=transforms.Resize((512, 512)),
     )
 
     train_loader = DataLoader(

@@ -78,7 +78,7 @@ def show_pafs_combined(pafs):
     plt.imshow(paf_pos)
 
 
-def show_pafs_quiver(pafs):
+def show_pafs_quiver(pafs, size):
     """
     shows all (16) pafs as vector fields using subplots
     """
@@ -102,16 +102,25 @@ def show_pafs_quiver(pafs):
         paf_y.append(pafs[i])
 
     for i in range(len(paf_x)):
-        px, py = np.meshgrid(np.arange(28), np.arange(28))
+        px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
         row_idx = i // num_cols
         col_idx = i % num_cols
-        axes[row_idx, col_idx].quiver(px, py, paf_x[i], paf_y[i], scale=1, scale_units='xy', angles='xy', pivot='tail')
+        axes[row_idx, col_idx].quiver(
+            px,
+            py,
+            paf_x[i],
+            paf_y[i],
+            scale=1,
+            scale_units="xy",
+            angles="xy",
+            pivot="tail",
+        )
         axes[row_idx, col_idx].invert_yaxis()
 
     plt.tight_layout()
 
 
-def show_pafs_quiver_combined(pafs):
+def show_pafs_quiver_combined(pafs, size):
     paf_x = []
     for i in range(0, pafs.size(dim=0), 2):
         paf_x.append(pafs[i])
@@ -123,12 +132,15 @@ def show_pafs_quiver_combined(pafs):
     paf_x = torch.sum(torch.stack(paf_x), dim=0)
     paf_y = torch.sum(torch.stack(paf_y), dim=0)
 
-    px, py = np.meshgrid(np.arange(28), np.arange(28))
-    plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units='xy', angles='xy', pivot='tail')
+    px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
+    plt.quiver(
+        px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail"
+    )
     plt.gca().invert_yaxis()
 
 
-def show_annotated(image, keypoints):
+def show_annotated(image, keypoints, size):
+    image = F.resize(image, size)
     res = draw_keypoints(
         F.convert_image_dtype(image, torch.uint8),
         keypoints,
@@ -146,8 +158,8 @@ def draw_keypoints(
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
-    radius: int = 2,
-    width: int = 2,
+    radius: int = 1,
+    width: int = 1,
 ):
     """
     Draws Keypoints on given RGB image.
