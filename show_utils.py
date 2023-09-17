@@ -149,6 +149,13 @@ def show_annotated(image, keypoints, size):
     )
     show1(res)
 
+def show_coco(image, target, coco, draw_bbox):
+        plt.axis("off")
+        plt.imshow(np.asarray(image))
+        # Plot segmentation and bounding box.
+        coco.showAnns(target, draw_bbox)
+
+
 
 @torch.no_grad()
 def draw_keypoints(

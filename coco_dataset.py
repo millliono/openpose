@@ -63,24 +63,28 @@ class CocoKeypoints(VisionDataset):
         return dict(dict_of_lists)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        """
-        returns:
-            PIL image
-            numpy array keypoints
-        """
         id = self.ids[index]
 
         image = self._load_image(id)
+        target = self._load_target(id)
+
+        masks =  [self.coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
+        if masks:
+            mask_out = np.add.reduce(masks)
+            mask_out = np.where(mask_out >= 1, 0, 1)
+        else:
+            mask_out = np.ones((image.size[1], image.size[0]))
+            
+
         prev_size = image.size
         if self.transform is not None:
-            image = self.transform(image)
-        new_size = image.size
+            tf_image = self.transform(image)
+        new_size = tf_image.size
         targ_size = (new_size[0] // 8, new_size[1] // 8)
 
-        target = self._load_target(id)
-        target = self.list_of_dicts_to_dict_of_lists(target)
+        tf_target = self.list_of_dicts_to_dict_of_lists(target)
 
-        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
+        keypoints = np.array(tf_target["keypoints"]).reshape(-1, 17, 3)
         keypoints = self.tf_resize_keypoints(keypoints, prev_size, targ_size)
         keypoints = keypoints.tolist()
 
@@ -95,13 +99,13 @@ class CocoKeypoints(VisionDataset):
         #
         # targets converted to TENSOR
         #
-        image = fcn.pil_to_tensor(image)
-        image = fcn.convert_image_dtype(image, torch.float32)
+        tf_image = fcn.pil_to_tensor(tf_image)
+        tf_image = fcn.convert_image_dtype(tf_image, torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
-        return image, pafs, heatmaps, keypoints, targ_size
+        return tf_image, pafs, heatmaps, keypoints, image, target, mask_out
 
     def __len__(self) -> int:
         return len(self.ids)
