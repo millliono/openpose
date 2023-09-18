@@ -6,15 +6,13 @@ from model import openpose
 from loss import PoseLoss
 from torch.utils.data import DataLoader
 from coco_dataset import CocoKeypoints
-import torchvision.transforms.functional as fcn
-import numpy as np
 
 # Hyperparameters etc.
 LEARNING_RATE = 2e-4
-BATCH_SIZE = 16
+BATCH_SIZE = 1
 WEIGHT_DECAY = 0
 EPOCHS = 1
-NUM_WORKERS = 16
+NUM_WORKERS = 1
 PIN_MEMORY = True
 LOAD_MODEL = False
 
@@ -23,15 +21,16 @@ def train_fn(train_loader, model, optimizer, loss_fn, device):
     loop = tqdm(train_loader, leave=True)
     mean_loss = []
 
-    for batch_idx, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+    for batch_idx, (image, targ_pafs, targ_heatmaps, mask_out) in enumerate(loop):
         image = image.to(device)
         targ_pafs = targ_pafs.to(device)
         targ_heatmaps = targ_heatmaps.to(device)
+        mask_out = mask_out.to(device)
 
         pred_pafs, pred_htmps, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
         loss = loss_fn(
-            save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps
+            save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps, mask_out
         )
         print(f"Batch-({batch_idx}) loss was {loss}")
 
@@ -50,8 +49,8 @@ def collate_fn(batch):
     images = torch.utils.data.dataloader.default_collate([b[0] for b in batch])
     pafs = torch.utils.data.dataloader.default_collate([b[1] for b in batch])
     heatmaps = torch.utils.data.dataloader.default_collate([b[2] for b in batch])
-
-    return images, pafs, heatmaps
+    mask_out = torch.utils.data.dataloader.default_collate([b[3] for b in batch])
+    return images, pafs, heatmaps, mask_out
 
 
 def main():
@@ -74,7 +73,7 @@ def main():
             / "annotations"
             / "person_keypoints_train2017.json"
         ),
-        transform=transforms.Resize((512, 512)),
+        transform=transforms.Resize((368, 368)),
     )
 
     train_loader = DataLoader(

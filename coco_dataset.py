@@ -5,7 +5,7 @@ from torchvision.datasets.vision import VisionDataset
 import numpy as np
 from collections import defaultdict
 import dataset_utils
-import torchvision.transforms.functional as fcn
+import torchvision.transforms.functional as F
 import torch
 
 """
@@ -68,19 +68,21 @@ class CocoKeypoints(VisionDataset):
         image = self._load_image(id)
         target = self._load_target(id)
 
-        masks =  [self.coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
+        masks = [self.coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
         if masks:
             mask_out = np.add.reduce(masks)
             mask_out = np.where(mask_out >= 1, 0, 1)
         else:
             mask_out = np.ones((image.size[1], image.size[0]))
-            
+        mask_out = torch.tensor(mask_out, dtype=torch.float32)
+        mask_out = F.resize(
+            mask_out.unsqueeze_(0), (46, 46), F.InterpolationMode.NEAREST
+        )
 
         prev_size = image.size
         if self.transform is not None:
             tf_image = self.transform(image)
-        new_size = tf_image.size
-        targ_size = (new_size[0] // 8, new_size[1] // 8)
+        targ_size = (46, 46)
 
         tf_target = self.list_of_dicts_to_dict_of_lists(target)
 
@@ -99,13 +101,13 @@ class CocoKeypoints(VisionDataset):
         #
         # targets converted to TENSOR
         #
-        tf_image = fcn.pil_to_tensor(tf_image)
-        tf_image = fcn.convert_image_dtype(tf_image, torch.float32)
+        tf_image = F.pil_to_tensor(tf_image)
+        tf_image = F.convert_image_dtype(tf_image, torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
-        return tf_image, pafs, heatmaps, keypoints, image, target, mask_out
+        return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
 
     def __len__(self) -> int:
         return len(self.ids)
