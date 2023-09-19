@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-
-import backbone
+import new_backbone
 
 
 class conv_block(nn.Module):
@@ -106,10 +105,10 @@ class inner_block(nn.Module):
 
 
 class openpose(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self):
         super(openpose, self).__init__()
 
-        self.backbone = backbone.vgg(in_channels=in_channels)
+        self.backbone = new_backbone.backbone()
 
         self.paf0 = inner_block(
             in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 32]
@@ -171,3 +170,19 @@ class openpose(nn.Module):
         HEATMAPS = x
 
         return PAFS, HEATMAPS, save_for_loss_pafs, save_for_loss_htmps
+    
+
+if __name__ == "__main__":
+    from torch.utils.tensorboard import SummaryWriter
+
+    model = openpose()
+
+    writer = SummaryWriter()
+
+    dummy_input = torch.rand(1, 3, 368, 368)
+    
+    writer.add_graph(model, dummy_input)
+    writer.close()
+
+    print(model.backbone)
+

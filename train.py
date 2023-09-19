@@ -54,11 +54,15 @@ def collate_fn(batch):
 
 
 def main():
-    device = "cuda" if torch.cuda.is_available else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     device = "cpu"  # comment when using modern gpu
 
-    model = openpose(in_channels=3).to(device)
+    model = openpose().to(device)
     model.train()
+
+    # freeze vgg19 layers
+    for param in model.backbone.ten_first_layers.parameters():
+        param.requires_grad = False
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY

@@ -74,7 +74,7 @@ def get_pafs(keypoints, size, visibility):
         limb_paf = np.add.reduce(limb_paf)
 
         # take the avg paf per limb  
-        limb_paf = limb_paf / paf_locs 
+        # limb_paf = limb_paf / paf_locs 
 
         pafs.append(limb_paf[0])
         pafs.append(limb_paf[1])
