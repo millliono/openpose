@@ -56,17 +56,26 @@ def get_limb_pafs(person, visibility, limb, size):
         pafs_x = np.where(paf_locs > 0, v_norm[0], 0)
         pafs_y = np.where(paf_locs > 0, v_norm[1], 0)
 
-        return np.stack([pafs_x, pafs_y], axis=0)
+        return np.stack([pafs_x, pafs_y], axis=0), paf_locs
     else:
-        return np.zeros((2, size[1], size[0]))
+        return np.zeros((2, size[1], size[0])), np.zeros((size[1], size[0]))
 
 
 def get_pafs(keypoints, size, visibility):
-
+    
     pafs = []
     for limb in common.connect_skeleton:
-        limb_paf = [get_limb_pafs(person, visibility, limb, size) for person in keypoints]
-        limb_paf = np.add.reduce(limb_paf)  # TODO: paper says take the average
+        res = [get_limb_pafs(person, visibility, limb, size) for person in keypoints]
+        limb_paf, paf_locs = zip(*res)
+
+        paf_locs = np.add.reduce(paf_locs)
+        paf_locs = np.where(paf_locs <= 1, 1, paf_locs)
+
+        limb_paf = np.add.reduce(limb_paf)
+
+        # take the avg paf per limb  
+        limb_paf = limb_paf / paf_locs 
+
         pafs.append(limb_paf[0])
         pafs.append(limb_paf[1])
     return pafs
