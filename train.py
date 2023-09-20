@@ -58,6 +58,8 @@ def main():
     device = "cpu"  # comment when using modern gpu
 
     model = openpose().to(device)
+    if device=="cuda":
+        model = torch.nn.DataParallel(model).cuda()
     model.train()
 
     # freeze vgg19 layers
