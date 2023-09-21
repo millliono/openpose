@@ -12,10 +12,10 @@ class backbone(nn.Module):
         self.remaining = nn.Sequential(
             nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
+            nn.PReLU(),
             nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            nn.PReLU(),
         )
 
     def forward(self, x):
@@ -33,7 +33,7 @@ class conv_block(nn.Module):
         self.use_relu = use_relu
 
         if self.use_relu:
-            self.relu = nn.ReLU()
+            self.relu = nn.PReLU()
 
     def forward(self, x):
         x = self.batchnorm(self.conv(x))

@@ -100,9 +100,7 @@ class CocoKeypoints(VisionDataset):
 
         #
         # targets converted to TENSOR
-        #
-        tf_image = F.pil_to_tensor(tf_image)
-        tf_image = F.convert_image_dtype(tf_image, torch.float32)
+        # 
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         keypoints = torch.tensor(keypoints, dtype=torch.float32)

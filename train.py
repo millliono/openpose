@@ -58,7 +58,7 @@ def main():
     device = "cpu"  # comment when using modern gpu
 
     model = openpose().to(device)
-    if device=="cuda":
+    if device == "cuda":
         model = torch.nn.DataParallel(model).cuda()
     model.train()
 
@@ -79,7 +79,14 @@ def main():
             / "annotations"
             / "person_keypoints_train2017.json"
         ),
-        transform=transforms.Resize((368, 368)),
+        transform=transforms.Compose(
+            [
+                transforms.Resize((368, 368)),
+                transforms.ToTensor(),
+                transforms.ConvertImageDtype(torch.float32),
+                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ]
+        ),
     )
 
     train_loader = DataLoader(
