@@ -63,7 +63,7 @@ def main():
     model.train()
 
     # freeze vgg19 layers
-    for param in model.backbone.ten_first_layers.parameters():
+    for param in model.module.backbone.ten_first_layers.parameters():
         param.requires_grad = False
 
     optimizer = torch.optim.Adam(
@@ -87,7 +87,7 @@ def main():
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
         pin_memory=PIN_MEMORY,  # ?
-        shuffle=False,
+        shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
     )
