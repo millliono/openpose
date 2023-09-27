@@ -68,16 +68,7 @@ class CocoKeypoints(VisionDataset):
         image = self._load_image(id)
         target = self._load_target(id)
 
-        masks = [self.coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
-        if masks:
-            mask_out = np.add.reduce(masks)
-            mask_out = np.where(mask_out >= 1, 0, 1)
-        else:
-            mask_out = np.ones((image.size[1], image.size[0]))
-        mask_out = torch.tensor(mask_out, dtype=torch.float32)
-        mask_out = F.resize(
-            mask_out.unsqueeze_(0), (46, 46), F.InterpolationMode.NEAREST
-        )
+        mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
         prev_size = image.size
         if self.transform is not None:
@@ -87,23 +78,22 @@ class CocoKeypoints(VisionDataset):
         tf_target = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(tf_target["keypoints"]).reshape(-1, 17, 3)
-        keypoints = self.tf_resize_keypoints(keypoints, prev_size, targ_size)
-        keypoints = keypoints.tolist()
+        tf_keypoints = self.tf_resize_keypoints(keypoints, prev_size, targ_size)
+        tf_keypoints = tf_keypoints.tolist()
 
         #
         # HERE paf & heatmaps is list of numpy arrays
         #
         heatmaps = dataset_utils.get_heatmaps(
-            keypoints, size=targ_size, visibility=[1, 2]
+            tf_keypoints, size=targ_size, visibility=[1, 2]
         )
-        pafs = dataset_utils.get_pafs(keypoints, size=targ_size, visibility=[1, 2])
+        pafs = dataset_utils.get_pafs(tf_keypoints, size=targ_size, visibility=[1, 2])
 
         #
         # targets converted to TENSOR
         # 
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
-        keypoints = torch.tensor(keypoints, dtype=torch.float32)
 
         return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
 
