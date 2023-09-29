@@ -149,12 +149,12 @@ def show_annotated(image, keypoints, size):
     )
     show1(res)
 
-def show_coco(image, target, coco, draw_bbox):
-        plt.axis("off")
-        plt.imshow(np.asarray(image))
-        # Plot segmentation and bounding box.
-        coco.showAnns(target, draw_bbox)
 
+def show_coco(image, target, coco, draw_bbox):
+    plt.axis("off")
+    plt.imshow(np.asarray(image))
+    # Plot segmentation and bounding box.
+    coco.showAnns(target, draw_bbox)
 
 
 @torch.no_grad()
@@ -228,3 +228,59 @@ def draw_keypoints(
     return (
         torch.from_numpy(np.array(img_to_draw)).permute(2, 0, 1).to(dtype=torch.uint8)
     )
+
+
+def surf_heatmap(heatmap):
+    # Create meshgrid for X and Y dimensions
+    x_dim = np.arange(0, heatmap.shape[1], 1)
+    y_dim = np.arange(0, heatmap.shape[0], 1)
+    X, Y = np.meshgrid(x_dim, y_dim)
+
+    # Flatten the 2D array into a 1D array for the Z dimension
+    Z = heatmap.flatten()
+
+    # Create a figure and axis
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Plot the 3D surface
+    ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
+
+    # Set labels and title
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("surf plot")
+
+
+def surf_heatmaps_combined(heatmaps):
+    num_images = len(heatmaps)
+    num_cols = 4
+    num_rows = (num_images - 1) // num_cols + 1
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(18, 15))
+
+    for i in range(num_rows):
+        for j in range(num_cols):
+            index = i * num_cols + j
+            if index < len(heatmaps):
+                heatmap = heatmaps[index]
+
+                # Create meshgrid for X and Y dimensions
+                x_dim = np.arange(0, heatmap.shape[1], 1)
+                y_dim = np.arange(0, heatmap.shape[0], 1)
+                X, Y = np.meshgrid(x_dim, y_dim)
+
+                # Flatten the 2D array into a 1D array for the Z dimension
+                Z = heatmap.flatten()
+
+                # Create a 3D subplot
+                ax = fig.add_subplot(num_rows, num_cols, index + 1, projection="3d")
+
+                # Plot the 3D surface
+                ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
+
+                # Set labels and title
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                ax.set_zlabel("Z")
