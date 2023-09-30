@@ -4,6 +4,7 @@ import torchvision.transforms.functional as F
 import numpy as np
 from PIL import ImageDraw
 
+
 def show_coco(image, target, coco, draw_bbox):
     plt.axis("off")
     plt.imshow(np.asarray(image))
@@ -123,7 +124,6 @@ def show_pafs_quiver_combined(pafs, size):
 def draw_keypoints(
     image,
     keypoints,
-    visibility,
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
@@ -144,10 +144,6 @@ def draw_keypoints(
 
         if connectivity:
             for connection in connectivity:
-                if (
-                    kpt_inst[connection[0]][2] in visibility
-                    and kpt_inst[connection[1]][2] in visibility
-                ):
                     start_pt_x = kpt_inst[connection[0]][0]
                     start_pt_y = kpt_inst[connection[0]][1]
 
@@ -160,9 +156,7 @@ def draw_keypoints(
                         fill=line_color,
                     )
 
-    return (
-        torch.from_numpy(np.array(img_to_draw)).permute(2, 0, 1).to(dtype=torch.uint8)
-    )
+    return np.array(img_to_draw)
 
 
 def surf_heatmap(heatmap):
