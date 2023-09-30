@@ -5,18 +5,7 @@ from torchvision.datasets.vision import VisionDataset
 import numpy as np
 from collections import defaultdict
 import dataset_utils
-import torchvision.transforms.functional as F
 import torch
-
-"""
-    This is the coco keypoints dataset class. 
-    
-    keeps only images with keypoint annotations
-    keeps people annotations without keypoints when other keypoint annoted people exist
-
-    Returns:    image: pil iamge
-                keypoints: list with keypoints
-"""
 
 
 class CocoKeypoints(VisionDataset):
@@ -49,7 +38,7 @@ class CocoKeypoints(VisionDataset):
         return True if len(keypoint_anns) > 0 else False
 
     def tf_resize_keypoints(self, keypoints, prev_size, new_size):
-        # this is a transform that resizes keypoints after an image resizing transform
+        # transform that resizes keypoints after image resizing transform
         scale_x = new_size[0] / prev_size[0]
         scale_y = new_size[1] / prev_size[1]
         resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
@@ -91,7 +80,7 @@ class CocoKeypoints(VisionDataset):
 
         #
         # targets converted to TENSOR
-        # 
+        #
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
 

@@ -2,18 +2,25 @@ import torch
 import matplotlib.pyplot as plt
 import torchvision.transforms.functional as F
 import numpy as np
-from PIL import Image, ImageColor, ImageDraw, ImageFont
-from torchvision import transforms
-import common
+from PIL import ImageDraw
+
+def show_coco(image, target, coco, draw_bbox):
+    plt.axis("off")
+    plt.imshow(np.asarray(image))
+    # Plot segmentation and bounding box.
+    coco.showAnns(target, draw_bbox)
 
 
-def show1(imgs):
+def show_tensors(imgs):
     """
     shows a list of tensor images using subplots
     """
     if not isinstance(imgs, list):
         imgs = [imgs]
-    fig, axs = plt.subplots(ncols=len(imgs), squeeze=False)
+    if len(imgs) > 1:
+        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(30, 9))
+    else:
+        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(4, 4))
     for i, img in enumerate(imgs):
         img = img.detach()
         img = F.to_pil_image(img)
@@ -21,31 +28,15 @@ def show1(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
-def show_subplots(img):
-    num_images = len(img)
-    num_cols = 4
-    num_rows = (num_images - 1) // num_cols + 1
-
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(12, 9))
-
-    if num_rows == 1:
-        axes = axes.reshape(1, -1)
-    elif num_cols == 1:
-        axes = axes.reshape(-1, 1)
-
-    for i, htmp in enumerate(img):
-        row_idx = i // num_cols
-        col_idx = i % num_cols
-        axes[row_idx, col_idx].imshow(htmp)
-
-    plt.tight_layout()
-
-
 def show_heatmaps(heatmaps):
     """
     shows all (17) heatmap points using subplots
     """
-    show_subplots(heatmaps)
+    my_list = []
+    for x in heatmaps:
+        my_list.append(x)
+
+    show_tensors(my_list)
 
 
 def show_heatmaps_combined(heatmaps):
@@ -53,7 +44,7 @@ def show_heatmaps_combined(heatmaps):
     shows image with all heatmaps stacked
     """
     htmp = torch.sum(heatmaps, dim=0)
-    plt.imshow(htmp)
+    show_tensors(htmp)
 
 
 def show_pafs(pafs):
@@ -61,21 +52,10 @@ def show_pafs(pafs):
     shows all (32) pafs in single figure (x_ccord, y_coord)
     using subplots
     """
-    show_subplots(pafs)
-
-
-def show_pafs_combined(pafs):
-    """
-    shows image with all paf vectors positions stacked.
-    """
-    paf_x = []
-    for i in range(0, pafs.size(dim=0), 2):
-        paf_x.append(pafs[i])
-
-    paf_x = torch.stack(paf_x)
-    paf_pos = torch.sum(paf_x, dim=0)
-    paf_pos = np.where(paf_pos != 0, 1, 0)
-    plt.imshow(paf_pos)
+    my_list = []
+    for x in pafs:
+        my_list.append(x)
+    show_tensors(my_list)
 
 
 def show_pafs_quiver(pafs, size):
@@ -139,24 +119,6 @@ def show_pafs_quiver_combined(pafs, size):
     plt.gca().invert_yaxis()
 
 
-def show_annotated(image, keypoints, size):
-    image = F.resize(image, size)
-    res = draw_keypoints(
-        F.convert_image_dtype(image, torch.uint8),
-        keypoints,
-        visibility=[1, 2],
-        connectivity=common.connect_skeleton,
-    )
-    show1(res)
-
-
-def show_coco(image, target, coco, draw_bbox):
-    plt.axis("off")
-    plt.imshow(np.asarray(image))
-    # Plot segmentation and bounding box.
-    coco.showAnns(target, draw_bbox)
-
-
 @torch.no_grad()
 def draw_keypoints(
     image,
@@ -165,47 +127,20 @@ def draw_keypoints(
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
-    radius: int = 1,
-    width: int = 1,
+    radius: int = 5,
+    width: int = 5,
 ):
-    """
-    Draws Keypoints on given RGB image.
-    The values of the input image should be uint8 between 0 and 255.
-
-    Args:
-        image (Tensor): Tensor of shape (3, H, W) and dtype uint8.
-        keypoints (Tensor): Tensor of shape (num_instances, K, 2) the K keypoints location for each of the N instances,
-
-    Returns:
-        img (Tensor[C, H, W]): Image Tensor of dtype uint8 with keypoints drawn.
-    """
-    if not isinstance(image, torch.Tensor):
-        raise TypeError(f"The image must be a tensor, got {type(image)}")
-    elif image.dtype != torch.uint8:
-        raise ValueError(f"The image dtype must be uint8, got {image.dtype}")
-    elif image.dim() != 3:
-        raise ValueError("Pass individual images, not batches")
-    elif image.size()[0] != 3:
-        raise ValueError("Pass an RGB image. Other Image formats are not supported")
-
-    if keypoints.ndim != 3:
-        raise ValueError("keypoints must be of shape (num_instances, K, 2)")
-
-    ndarr = image.permute(1, 2, 0).cpu().numpy()
-    img_to_draw = Image.fromarray(ndarr)
+    img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
-    img_kpts = keypoints.to(torch.int64).tolist()
+    img_kpts = keypoints
 
     for kpt_id, kpt_inst in enumerate(img_kpts):
         for inst_id, kpt in enumerate(kpt_inst):
-            if kpt[2] in visibility:  # change here
-                x1 = kpt[0] - radius
-                x2 = kpt[0] + radius
-                y1 = kpt[1] - radius
-                y2 = kpt[1] + radius
-                draw.ellipse(
-                    [x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0
-                )
+            x1 = kpt[0] - radius
+            x2 = kpt[0] + radius
+            y1 = kpt[1] - radius
+            y2 = kpt[1] + radius
+            draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
 
         if connectivity:
             for connection in connectivity:
@@ -231,56 +166,14 @@ def draw_keypoints(
 
 
 def surf_heatmap(heatmap):
-    # Create meshgrid for X and Y dimensions
     x_dim = np.arange(0, heatmap.shape[1], 1)
     y_dim = np.arange(0, heatmap.shape[0], 1)
     X, Y = np.meshgrid(x_dim, y_dim)
-
-    # Flatten the 2D array into a 1D array for the Z dimension
     Z = heatmap.flatten()
 
-    # Create a figure and axis
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
-    # Plot the 3D surface
     ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
 
-    # Set labels and title
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
     ax.set_title("surf plot")
-
-
-def surf_heatmaps_combined(heatmaps):
-    num_images = len(heatmaps)
-    num_cols = 4
-    num_rows = (num_images - 1) // num_cols + 1
-
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(18, 15))
-
-    for i in range(num_rows):
-        for j in range(num_cols):
-            index = i * num_cols + j
-            if index < len(heatmaps):
-                heatmap = heatmaps[index]
-
-                # Create meshgrid for X and Y dimensions
-                x_dim = np.arange(0, heatmap.shape[1], 1)
-                y_dim = np.arange(0, heatmap.shape[0], 1)
-                X, Y = np.meshgrid(x_dim, y_dim)
-
-                # Flatten the 2D array into a 1D array for the Z dimension
-                Z = heatmap.flatten()
-
-                # Create a 3D subplot
-                ax = fig.add_subplot(num_rows, num_cols, index + 1, projection="3d")
-
-                # Plot the 3D surface
-                ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
-
-                # Set labels and title
-                ax.set_xlabel("X")
-                ax.set_ylabel("Y")
-                ax.set_zlabel("Z")

@@ -159,3 +159,23 @@ def assign_limbs_to_people(connections):
                         del humans[index_b]
                         humans.append(merged)
     return humans
+
+
+def find_dict(my_list, id):
+    for x in my_list:
+        if x:
+            for y in x:
+                if y["id"] == id:
+                    found_dict = y
+                    break
+    return found_dict
+
+
+def get_people_parts(humans, parts):
+    people_parts = []
+    for single_person in humans:
+        single_person_parts = []
+        for part_id in single_person:
+            single_person_parts.append(find_dict(parts, part_id))
+        people_parts.append(single_person_parts)
+    return people_parts
