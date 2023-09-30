@@ -20,7 +20,7 @@ def get_bodyparts(heatmaps):
             all_bodyparts.append([])
 
         else:
-            bodyparts_form_heatmap = []
+            my_list = []
             peaks_scores = heatmaps[i][peaks_coords]
             # use xy coords
             peaks_coords = np.flip(np.array(peaks_coords).T)
@@ -33,27 +33,27 @@ def get_bodyparts(heatmaps):
                     "id": unique_id,
                 }
                 unique_id += 1
-                bodyparts_form_heatmap.append(bodypart)
-            all_bodyparts.append(bodyparts_form_heatmap)
+                my_list.append(bodypart)
+            all_bodyparts.append(my_list)
 
     return all_bodyparts
 
 
-def get_limb_scores(pafs, parts):
+def get_limb_scores(pafs, bodyparts):
     all_limb_scores = []
 
     for i in range(len(pafs) // 2):
         partA_id = common.connect_skeleton[i][0]
         partB_id = common.connect_skeleton[i][1]
 
-        partsA = parts[partA_id]  # list with bodypart dictionaries
-        partsB = parts[partB_id]
+        partsA = bodyparts[partA_id]  # list with bodypart dictionaries
+        partsB = bodyparts[partB_id]
 
         pafx = pafs[2 * i]
         pafy = pafs[2 * i + 1]
 
         if partsA and partsB:
-            limb_scores = []
+            my_list = []
             for pka in partsA:
                 for pkb in partsB:
                     v = pkb["coords"] - pka["coords"]
@@ -68,7 +68,7 @@ def get_limb_scores(pafs, parts):
                         np.linspace(pka["coords"][1], pkb["coords"][1], 10)
                     ).astype(int)
 
-                    # flip for ij coords
+                    # flip indexing for ij coords
                     paf_x = pafx[line_y, line_x]
                     paf_y = pafy[line_y, line_x]
 
@@ -81,53 +81,50 @@ def get_limb_scores(pafs, parts):
                         "limb_id": i,
                     }
 
-                    limb_scores.append(limb)
-            all_limb_scores.append(limb_scores)
+                    my_list.append(limb)
+            all_limb_scores.append(my_list)
         else:
             all_limb_scores.append([])
 
     return all_limb_scores
 
 
-def get_connections(limb_scores, parts):
+def get_connections(limb_scores, bodyparts):
     all_connections = []
 
     for i in range(len(limb_scores)):
-        partA_id = common.connect_skeleton[i][0]
-        partB_id = common.connect_skeleton[i][1]
+        if limb_scores[i]:
+            partA_id = common.connect_skeleton[i][0]
+            partB_id = common.connect_skeleton[i][1]
 
-        npks_a = len(parts[partA_id])
-        npks_b = len(parts[partB_id])
+            num_a = len(bodyparts[partA_id])
+            num_b = len(bodyparts[partB_id])
+            max_connections = min(num_a, num_b)
 
-        if npks_a == 0 or npks_b == 0:
-            all_connections.append([])
-        else:
-            candidate_limbs = limb_scores[i]
-
-            max_connections = min(npks_a, npks_b)
-
-            connections = []
-            used = []
-            candidate_limbs = sorted(
-                candidate_limbs, key=lambda x: x["score"], reverse=True
+            limb_scores[i] = sorted(
+                limb_scores[i], key=lambda x: x["score"], reverse=True
             )
 
-            for limb in candidate_limbs:
-                if limb["id_a"] not in used and limb["id_b"] not in used:
-                    connections.append(limb)
-                    used.append(limb["id_a"])
-                    used.append(limb["id_b"])
+            my_list = []
+            used = []
+            for x in limb_scores[i]:
+                if x["id_a"] not in used and x["id_b"] not in used:
+                    my_list.append(x)
+                    used.append(x["id_a"])
+                    used.append(x["id_b"])
 
-                    if len(connections) >= max_connections:
+                    if len(my_list) >= max_connections:
                         break
-            all_connections.append(connections)
+            all_connections.append(my_list)
+        else:
+            all_connections.append([])
 
     return all_connections
 
 
-def find_item(my_list, item):
-    for index, sublist in enumerate(my_list):
-        if item in sublist:
+def find_in_list(my_list, item):
+    for index, x in enumerate(my_list):
+        if item in x:
             return index
     return None  # Item not found
 
@@ -135,20 +132,20 @@ def find_item(my_list, item):
 def assign_limbs_to_people(connections):
     humans = []
 
-    for con in connections:
-        if con:
-            for limb in con:
-                index_a = find_item(humans, limb["id_a"])
-                index_b = find_item(humans, limb["id_b"])
+    for x in connections:
+        if x:
+            for y in x:
+                index_a = find_in_list(humans, y["id_a"])
+                index_b = find_in_list(humans, y["id_b"])
 
                 if index_a is None and index_b is None:
-                    humans.append([limb["id_a"], limb["id_b"]])
+                    humans.append([y["id_a"], y["id_b"]])
 
                 elif index_a is not None and index_b is None:
-                    humans[index_a].append(limb["id_b"])
+                    humans[index_a].append(y["id_b"])
 
                 elif index_a is None and index_b is not None:
-                    humans[index_b].append(limb["id_a"])
+                    humans[index_b].append(y["id_a"])
 
                 elif index_a is not None and index_b is not None:
                     if index_a == index_b:
@@ -161,7 +158,11 @@ def assign_limbs_to_people(connections):
     return humans
 
 
-def find_dict(my_list, id):
+
+
+# I DONT LIKE AFTER THIS LINE
+#--------------------------------------
+def find_in_dict(my_list, id):
     for x in my_list:
         if x:
             for y in x:
@@ -171,11 +172,11 @@ def find_dict(my_list, id):
     return found_dict
 
 
-def get_people_parts(humans, parts):
+def get_people_parts(humans, bodyparts):
     people_parts = []
-    for single_person in humans:
+    for x in humans:
         single_person_parts = []
-        for part_id in single_person:
-            single_person_parts.append(find_dict(parts, part_id))
+        for y in x:
+            single_person_parts.append(find_in_dict(bodyparts, y))
         people_parts.append(single_person_parts)
     return people_parts
