@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter, maximum_filter
 from scipy.ndimage import generate_binary_structure
 import common
@@ -46,7 +45,7 @@ def get_limb_scores(pafs, bodyparts):
         partA_id = common.connect_skeleton[i][0]
         partB_id = common.connect_skeleton[i][1]
 
-        partsA = bodyparts[partA_id]  # list with bodypart dictionaries
+        partsA = bodyparts[partA_id]
         partsB = bodyparts[partB_id]
 
         pafx = pafs[2 * i]
@@ -158,25 +157,19 @@ def assign_limbs_to_people(connections):
     return humans
 
 
-
-
-# I DONT LIKE AFTER THIS LINE
-#--------------------------------------
-def find_in_dict(my_list, id):
-    for x in my_list:
+def get_people_parts(humans, bodyparts):
+    unpacked = []
+    for x in bodyparts:
         if x:
             for y in x:
-                if y["id"] == id:
-                    found_dict = y
-                    break
-    return found_dict
+                unpacked.append(y)
 
-
-def get_people_parts(humans, bodyparts):
-    people_parts = []
+    all_people_parts = []
     for x in humans:
-        single_person_parts = []
+        my_list = []
         for y in x:
-            single_person_parts.append(find_in_dict(bodyparts, y))
-        people_parts.append(single_person_parts)
-    return people_parts
+            my_list.append(unpacked[y])
+            assert unpacked[y]["id"] == y
+        all_people_parts.append(my_list)
+
+    return all_people_parts
