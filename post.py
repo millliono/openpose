@@ -2,7 +2,9 @@ import numpy as np
 from scipy.ndimage import gaussian_filter, maximum_filter
 from scipy.ndimage import generate_binary_structure
 import common
-
+from torchvision import transforms
+import show_utils
+import matplotlib.pyplot as plt
 
 def get_bodyparts(heatmaps):
     all_bodyparts = []
@@ -129,35 +131,35 @@ def find_in_list(my_list, item):
 
 
 def assign_limbs_to_people(connections):
-    humans = []
+    people = []
 
     for x in connections:
         if x:
             for y in x:
-                index_a = find_in_list(humans, y["id_a"])
-                index_b = find_in_list(humans, y["id_b"])
+                index_a = find_in_list(people, y["id_a"])
+                index_b = find_in_list(people, y["id_b"])
 
                 if index_a is None and index_b is None:
-                    humans.append([y["id_a"], y["id_b"]])
+                    people.append([y["id_a"], y["id_b"]])
 
                 elif index_a is not None and index_b is None:
-                    humans[index_a].append(y["id_b"])
+                    people[index_a].append(y["id_b"])
 
                 elif index_a is None and index_b is not None:
-                    humans[index_b].append(y["id_a"])
+                    people[index_b].append(y["id_a"])
 
                 elif index_a is not None and index_b is not None:
                     if index_a == index_b:
                         continue
                     else:
-                        merged = humans[index_a] + humans[index_b]
-                        del humans[index_a]
-                        del humans[index_b]
-                        humans.append(merged)
-    return humans
+                        merged = people[index_a] + people[index_b]
+                        del people[index_a]
+                        del people[index_b]
+                        people.append(merged)
+    return people
 
 
-def get_people_parts(humans, bodyparts):
+def get_people_parts(people, bodyparts):
     unpacked = []
     for x in bodyparts:
         if x:
@@ -165,7 +167,7 @@ def get_people_parts(humans, bodyparts):
                 unpacked.append(y)
 
     all_people_parts = []
-    for x in humans:
+    for x in people:
         my_list = []
         for y in x:
             my_list.append(unpacked[y])
@@ -173,3 +175,40 @@ def get_people_parts(humans, bodyparts):
         all_people_parts.append(my_list)
 
     return all_people_parts
+
+
+def body_parser(image_size, heatmaps, pafs):
+    heatmaps = transforms.functional.resize(
+        heatmaps,
+        (image_size[1], image_size[0]),
+        transforms.functional.InterpolationMode.BICUBIC,
+    )
+
+    pafs = transforms.functional.resize(
+        pafs,
+        (image_size[1], image_size[0]),
+        transforms.functional.InterpolationMode.NEAREST,
+    )
+
+    heatmaps = heatmaps.numpy()
+    pafs = pafs.numpy()
+
+    bodyparts = get_bodyparts(heatmaps)
+    limb_scores = get_limb_scores(pafs, bodyparts)
+    connections = get_connections(limb_scores, bodyparts)
+    people = assign_limbs_to_people(connections)
+    people_parts = get_people_parts(people, bodyparts)
+
+    return people_parts
+
+
+def show_keypoints(image, people_parts):
+    all_keypoints = []
+    for x in people_parts:
+        my_list = []
+        for y in x:
+            my_list.append(y["coords"])
+        all_keypoints.append(my_list)
+
+    res = show_utils.draw_keypoints(image, all_keypoints, connectivity=False)
+    plt.imshow(res)
