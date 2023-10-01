@@ -6,6 +6,7 @@ from torchvision import transforms
 import show_utils
 import matplotlib.pyplot as plt
 
+
 def get_bodyparts(heatmaps):
     all_bodyparts = []
     unique_id = 0
@@ -174,6 +175,9 @@ def get_people_parts(people, bodyparts):
             assert unpacked[y]["id"] == y
         all_people_parts.append(my_list)
 
+    for i in range(len(all_people_parts)):
+        all_people_parts[i] = sorted(all_people_parts[i], key=lambda x: x["part_id"])
+
     return all_people_parts
 
 
@@ -202,13 +206,20 @@ def body_parser(image_size, heatmaps, pafs):
     return people_parts
 
 
-def show_keypoints(image, people_parts):
-    all_keypoints = []
-    for x in people_parts:
-        my_list = []
-        for y in x:
-            my_list.append(y["coords"])
-        all_keypoints.append(my_list)
+def format_keypoints(people_parts):
+    formated_keypoints = []
 
-    res = show_utils.draw_keypoints(image, all_keypoints, connectivity=False)
+    for x in people_parts:
+        my_list = [None] * 17
+        for y in x:
+            my_list[y["part_id"]] = y["coords"].tolist()
+        formated_keypoints.append(my_list)
+
+    return formated_keypoints
+
+
+def show_keypoints(image, formated_keypoints):
+    res = show_utils.draw_keypoints(
+        image, formated_keypoints, connectivity=common.connect_skeleton
+    )
     plt.imshow(res)

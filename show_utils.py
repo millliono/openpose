@@ -136,25 +136,27 @@ def draw_keypoints(
 
     for kpt_id, kpt_inst in enumerate(img_kpts):
         for inst_id, kpt in enumerate(kpt_inst):
-            x1 = kpt[0] - radius
-            x2 = kpt[0] + radius
-            y1 = kpt[1] - radius
-            y2 = kpt[1] + radius
-            draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
+            if kpt is not None:
+                x1 = kpt[0] - radius
+                x2 = kpt[0] + radius
+                y1 = kpt[1] - radius
+                y2 = kpt[1] + radius
+                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
 
         if connectivity:
             for connection in connectivity:
-                    start_pt_x = kpt_inst[connection[0]][0]
-                    start_pt_y = kpt_inst[connection[0]][1]
+                    if kpt_inst[connection[0]] is not None and kpt_inst[connection[1]] is not None:
+                        start_pt_x = kpt_inst[connection[0]][0]
+                        start_pt_y = kpt_inst[connection[0]][1]
 
-                    end_pt_x = kpt_inst[connection[1]][0]
-                    end_pt_y = kpt_inst[connection[1]][1]
+                        end_pt_x = kpt_inst[connection[1]][0]
+                        end_pt_y = kpt_inst[connection[1]][1]
 
-                    draw.line(
-                        ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
-                        width=width,
-                        fill=line_color,
-                    )
+                        draw.line(
+                            ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
+                            width=width,
+                            fill=line_color,
+                        )
 
     return np.array(img_to_draw)
 
