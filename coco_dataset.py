@@ -6,6 +6,7 @@ import numpy as np
 from collections import defaultdict
 import dataset_utils
 import torch
+import torchvision.transforms.functional as F
 
 
 class CocoKeypoints(VisionDataset):
@@ -37,10 +38,10 @@ class CocoKeypoints(VisionDataset):
         keypoint_anns = [tar for tar in target if tar["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
-    def tf_resize_keypoints(self, keypoints, prev_size, new_size):
+    def tf_resize_keypoints(self, keypoints, image_size, new_size):
         # transform that resizes keypoints after image resizing transform
-        scale_x = new_size[0] / prev_size[0]
-        scale_y = new_size[1] / prev_size[1]
+        scale_x = new_size[0] / image_size[0]
+        scale_y = new_size[1] / image_size[1]
         resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
         return resized_keypoints
 
@@ -59,30 +60,33 @@ class CocoKeypoints(VisionDataset):
 
         mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
-        prev_size = image.size
+        image_size = image.size
+        targ_size = (46, 46)
         if self.transform is not None:
             tf_image = self.transform(image)
-        targ_size = (46, 46)
 
         tf_target = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(tf_target["keypoints"]).reshape(-1, 17, 3)
-        tf_keypoints = self.tf_resize_keypoints(keypoints, prev_size, targ_size)
-        tf_keypoints = tf_keypoints.tolist()
+        # tf_keypoints = self.tf_resize_keypoints(keypoints, image_size, targ_size)
+        keypoints = keypoints.tolist()
 
         #
         # HERE paf & heatmaps is list of numpy arrays
         #
         heatmaps = dataset_utils.get_heatmaps(
-            tf_keypoints, size=targ_size, visibility=[1, 2]
+            keypoints, size=image_size, visibility=[1, 2]
         )
-        pafs = dataset_utils.get_pafs(tf_keypoints, size=targ_size, visibility=[1, 2])
+        pafs = dataset_utils.get_pafs(keypoints, size=image_size, visibility=[1, 2])
 
         #
         # targets converted to TENSOR
         #
-        pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
+        heatmaps = F.resize(heatmaps, targ_size, interpolation=F.InterpolationMode.BICUBIC)
+
+        pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
+        pafs = F.resize(pafs, targ_size, interpolation=F.InterpolationMode.NEAREST)
 
         return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
 
