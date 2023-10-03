@@ -1,27 +1,30 @@
 import os.path
 from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
-from torchvision.datasets.vision import VisionDataset
 import numpy as np
 from collections import defaultdict
 import dataset_utils
+import torch.utils.data as data
 import torch
-import torchvision.transforms.functional as F
 
-
-class CocoKeypoints(VisionDataset):
+class CocoKeypoints(data.Dataset):
     def __init__(
         self,
-        root: str,
-        annFile: str,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
+        root,
+        annFile,
+        input_transform,
+        heatmaps_transform,
+        pafs_transform,
     ) -> None:
-        super().__init__(root, transform=transform, target_transform=target_transform)
         from pycocotools.coco import COCO
 
+        self.root = root
         self.coco = COCO(annFile)
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
+
+        self.input_transform = input_transform
+        self.heatmaps_transform = heatmaps_transform
+        self.pafs_transform = pafs_transform
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -37,13 +40,6 @@ class CocoKeypoints(VisionDataset):
         target = self._load_target(img_id)
         keypoint_anns = [tar for tar in target if tar["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
-
-    def tf_resize_keypoints(self, keypoints, image_size, new_size):
-        # transform that resizes keypoints after image resizing transform
-        scale_x = new_size[0] / image_size[0]
-        scale_y = new_size[1] / image_size[1]
-        resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
-        return resized_keypoints
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
         dict_of_lists = defaultdict(list)
@@ -61,34 +57,30 @@ class CocoKeypoints(VisionDataset):
         mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
         image_size = image.size
-        targ_size = (46, 46)
-        if self.transform is not None:
-            tf_image = self.transform(image)
+        # input transforms
+        if self.input_transform is not None:
+            input_image = self.input_transform(image)
 
-        tf_target = self.list_of_dicts_to_dict_of_lists(target)
+        target = self.list_of_dicts_to_dict_of_lists(target)
 
-        keypoints = np.array(tf_target["keypoints"]).reshape(-1, 17, 3)
-        # tf_keypoints = self.tf_resize_keypoints(keypoints, image_size, targ_size)
+        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
         keypoints = keypoints.tolist()
 
-        #
-        # HERE paf & heatmaps is list of numpy arrays
-        #
         heatmaps = dataset_utils.get_heatmaps(
             keypoints, size=image_size, visibility=[1, 2]
         )
         pafs = dataset_utils.get_pafs(keypoints, size=image_size, visibility=[1, 2])
 
-        #
-        # targets converted to TENSOR
-        #
+        # target transforms
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
-        heatmaps = F.resize(heatmaps, targ_size, interpolation=F.InterpolationMode.BICUBIC)
+        if self.heatmaps_transform is not None:
+            heatmaps = self.heatmaps_transform(heatmaps)
 
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
-        pafs = F.resize(pafs, targ_size, interpolation=F.InterpolationMode.NEAREST)
+        if self.pafs_transform is not None:
+            pafs = self.pafs_transform(pafs)
 
-        return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
+        return input_image, pafs, heatmaps, mask_out, keypoints, image, target
 
     def __len__(self) -> int:
         return len(self.ids)
