@@ -127,8 +127,8 @@ def draw_keypoints(
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
-    radius: int = 5,
-    width: int = 5,
+    radius: int = 3,
+    width: int = 3,
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)

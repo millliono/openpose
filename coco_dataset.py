@@ -61,9 +61,9 @@ class CocoKeypoints(data.Dataset):
         if self.input_transform is not None:
             input_image = self.input_transform(image)
 
-        target = self.list_of_dicts_to_dict_of_lists(target)
+        target_new = self.list_of_dicts_to_dict_of_lists(target)
 
-        keypoints = np.array(target["keypoints"]).reshape(-1, 17, 3)
+        keypoints = np.array(target_new["keypoints"]).reshape(-1, 17, 3)
         keypoints = keypoints.tolist()
 
         heatmaps = dataset_utils.get_heatmaps(

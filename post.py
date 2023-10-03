@@ -6,6 +6,8 @@ from torchvision import transforms
 import show_utils
 import matplotlib.pyplot as plt
 
+thresh1 = 0.3
+thresh2 = 0.05
 
 def get_bodyparts(heatmaps):
     all_bodyparts = []
@@ -15,7 +17,7 @@ def get_bodyparts(heatmaps):
         filtered = maximum_filter(
             heatmaps[i], footprint=generate_binary_structure(2, 1)
         )
-        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > 0.3))
+        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > thresh1))
 
         # if no peaks found
         if peaks_coords[0].size == 0:
@@ -41,7 +43,7 @@ def get_bodyparts(heatmaps):
     return all_bodyparts
 
 
-def get_limb_scores(pafs, bodyparts):
+def get_limb_scores(pafs, bodyparts, image_size):
     all_limb_scores = []
 
     for i in range(len(pafs) // 2):
@@ -73,17 +75,25 @@ def get_limb_scores(pafs, bodyparts):
                     # flip indexing for ij coords
                     paf_x = pafx[line_y, line_x]
                     paf_y = pafy[line_y, line_x]
+                    paf_vec = (paf_x, paf_y)
 
-                    score = np.sum(np.dot(v_norm, (paf_x, paf_y)))
+                    scores = np.dot(v_norm, paf_vec)
+                    # penalize limbs longer than image.H/2
+                    penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
+                    penalized_score = scores.mean() + penalty
 
-                    limb = {
-                        "id_a": pka["id"],
-                        "id_b": pkb["id"],
-                        "score": score,
-                        "limb_id": i,
-                    }
+                    criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores) # here 0.8 is too stringent
+                    criterion2 = penalized_score > 0
 
-                    my_list.append(limb)
+                    if criterion1 and criterion2:
+                        limb = {
+                            "id_a": pka["id"],
+                            "id_b": pkb["id"],
+                            "score": penalized_score,
+                            "limb_id": i,
+                        }
+
+                        my_list.append(limb)
             all_limb_scores.append(my_list)
         else:
             all_limb_scores.append([])
@@ -198,7 +208,7 @@ def body_parser(image_size, heatmaps, pafs):
     pafs = pafs.numpy()
 
     bodyparts = get_bodyparts(heatmaps)
-    limb_scores = get_limb_scores(pafs, bodyparts)
+    limb_scores = get_limb_scores(pafs, bodyparts, image_size)
     connections = get_connections(limb_scores, bodyparts)
     people = assign_limbs_to_people(connections)
     people_parts = get_people_parts(people, bodyparts)
