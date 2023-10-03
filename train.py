@@ -79,13 +79,19 @@ def main():
             / "annotations"
             / "person_keypoints_train2017.json"
         ),
-        transform=transforms.Compose(
+        input_transform=transforms.Compose(
             [
                 transforms.Resize((368, 368)),
                 transforms.ToTensor(),
                 transforms.ConvertImageDtype(torch.float32),
                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             ]
+        ),
+        heatmaps_transform=transforms.Resize(
+            (46, 46), interpolation=transforms.InterpolationMode.BICUBIC
+        ),
+        pafs_transform=transforms.Resize(
+            (46, 46), interpolation=transforms.InterpolationMode.NEAREST
         ),
     )
 
