@@ -204,6 +204,16 @@ def group_parts(groups):
 
     return unique
 
+def supress_low_conf_people(groups):
+    keep = []
+    for x in groups:
+        score = 0
+        for y in x:
+            score += y["limb_score"] + y["part_a"]["score"] + y["part_b"]["score"]
+        if score/len(x) > 0.2 and len(x) >= 3:
+            keep.append(x)
+    return keep
+
 
 def post_process(image_size, heatmaps, pafs):
     heatmaps = transforms.functional.resize(
@@ -225,9 +235,11 @@ def post_process(image_size, heatmaps, pafs):
     limb_scores = get_limb_scores(pafs, bodyparts, image_size)
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
-    part_groups = group_parts(limb_groups)
+    supp = supress_low_conf_people(limb_groups)
+    part_groups = group_parts(supp)
 
     return part_groups
+
 
 
 def coco_format(part_groups):
