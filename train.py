@@ -88,10 +88,10 @@ def main():
             ]
         ),
         heatmaps_transform=transforms.Resize(
-            (46, 46), interpolation=transforms.InterpolationMode.BICUBIC
+            (46, 46), interpolation=transforms.InterpolationMode.BICUBIC, antialias=False
         ),
         pafs_transform=transforms.Resize(
-            (46, 46), interpolation=transforms.InterpolationMode.NEAREST
+            (46, 46), interpolation=transforms.InterpolationMode.NEAREST, antialias=False
         ),
     )
 
