@@ -87,9 +87,9 @@ def get_limb_scores(pafs, bodyparts, image_size):
 
                     if criterion1 and criterion2:
                         limb = {
-                            "id_a": pka["id"],
-                            "id_b": pkb["id"],
-                            "score": penalized_score,
+                            "part_a": pka,
+                            "part_b": pkb,
+                            "limb_score": penalized_score,
                             "limb_id": i,
                         }
 
@@ -114,16 +114,16 @@ def get_connections(limb_scores, bodyparts):
             max_connections = min(num_a, num_b)
 
             limb_scores[i] = sorted(
-                limb_scores[i], key=lambda x: x["score"], reverse=True
+                limb_scores[i], key=lambda x: x["limb_score"], reverse=True
             )
 
             my_list = []
             used = []
             for x in limb_scores[i]:
-                if x["id_a"] not in used and x["id_b"] not in used:
+                if x["part_a"]["id"] not in used and x["part_b"]["id"] not in used:
                     my_list.append(x)
-                    used.append(x["id_a"])
-                    used.append(x["id_b"])
+                    used.append(x["part_a"]["id"])
+                    used.append(x["part_b"]["id"])
 
                     if len(my_list) >= max_connections:
                         break
@@ -141,57 +141,71 @@ def find_in_list(my_list, item):
     return None  # Item not found
 
 
-def assign_limbs_to_people(connections):
-    people = []
+def group_limbs(connections):
+    groups = []
+    bins = []
 
     for x in connections:
         if x:
             for y in x:
-                index_a = find_in_list(people, y["id_a"])
-                index_b = find_in_list(people, y["id_b"])
+                index_a = find_in_list(bins, y["part_a"]["id"])
+                index_b = find_in_list(bins, y["part_b"]["id"])
 
                 if index_a is None and index_b is None:
-                    people.append([y["id_a"], y["id_b"]])
+                    bins.append([y["part_a"]["id"], y["part_b"]["id"]])
+                    groups.append([y])
 
                 elif index_a is not None and index_b is None:
-                    people[index_a].append(y["id_b"])
+                    bins[index_a].append(y["part_b"]["id"])
+                    groups[index_a].append(y)
 
                 elif index_a is None and index_b is not None:
-                    people[index_b].append(y["id_a"])
+                    bins[index_b].append(y["part_a"]["id"])
+                    groups[index_b].append(y)
 
                 elif index_a is not None and index_b is not None:
                     if index_a == index_b:
-                        continue
+                        groups[index_a].append(y)
                     else:
-                        merged = people[index_a] + people[index_b]
-                        del people[index_a]
-                        del people[index_b]
-                        people.append(merged)
-    return people
+                        merged_bins = bins[index_a] + bins[index_b]
+                        del bins[index_a]
+                        del bins[index_b]
+                        bins.append(merged_bins)
+
+                        merged_groups = groups[index_a] + groups[index_b]
+                        del groups[index_a]
+                        del groups[index_b]
+                        groups.append(merged_groups)
+    return groups
 
 
-def get_people_parts(people, bodyparts):
-    unpacked = []
-    for x in bodyparts:
-        if x:
-            for y in x:
-                unpacked.append(y)
+def group_parts(groups):
+    person_parts = []
 
-    all_people_parts = []
-    for x in people:
+    for x in groups:
         my_list = []
         for y in x:
-            my_list.append(unpacked[y])
-            assert unpacked[y]["id"] == y
-        all_people_parts.append(my_list)
+            my_list.append(y["part_a"])
+            my_list.append(y["part_b"])
+        person_parts.append(my_list)
 
-    for i in range(len(all_people_parts)):
-        all_people_parts[i] = sorted(all_people_parts[i], key=lambda x: x["part_id"])
+    unique = []
+    for x in person_parts:
+        my_list = []
+        used = []
+        for y in x:
+            if y["id"] not in used:
+                my_list.append(y)
+                used.append(y["id"])
+        unique.append(my_list)
 
-    return all_people_parts
+    for i in range(len(unique)):
+        unique[i] = sorted(unique[i], key=lambda x: x["part_id"])
+
+    return unique
 
 
-def body_parser(image_size, heatmaps, pafs):
+def post_process(image_size, heatmaps, pafs):
     heatmaps = transforms.functional.resize(
         heatmaps,
         (image_size[1], image_size[0]),
@@ -210,26 +224,26 @@ def body_parser(image_size, heatmaps, pafs):
     bodyparts = get_bodyparts(heatmaps)
     limb_scores = get_limb_scores(pafs, bodyparts, image_size)
     connections = get_connections(limb_scores, bodyparts)
-    people = assign_limbs_to_people(connections)
-    people_parts = get_people_parts(people, bodyparts)
+    limb_groups = group_limbs(connections)
+    part_groups = group_parts(limb_groups)
 
-    return people_parts
+    return part_groups
 
 
-def format_keypoints(people_parts):
-    formated_keypoints = []
+def coco_format(part_groups):
+    keypoints = []
 
-    for x in people_parts:
+    for x in part_groups:
         my_list = [None] * 17
         for y in x:
             my_list[y["part_id"]] = y["coords"].tolist()
-        formated_keypoints.append(my_list)
+        keypoints.append(my_list)
 
-    return formated_keypoints
+    return keypoints
 
 
-def show_keypoints(image, formated_keypoints):
+def show_keypoints(image, keypoints):
     res = show_utils.draw_keypoints(
-        image, formated_keypoints, connectivity=common.connect_skeleton
+        image, keypoints, connectivity=common.connect_skeleton
     )
     plt.imshow(res)
