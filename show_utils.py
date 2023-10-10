@@ -132,31 +132,32 @@ def draw_keypoints(
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
-    img_kpts = keypoints
 
-    for kpt_id, kpt_inst in enumerate(img_kpts):
-        for inst_id, kpt in enumerate(kpt_inst):
-            if kpt is not None:
-                x1 = kpt[0] - radius
-                x2 = kpt[0] + radius
-                y1 = kpt[1] - radius
-                y2 = kpt[1] + radius
-                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
+    for x in keypoints:
+        for y in x:
+            if y[2] is not 0:
+                x1 = y[0] - radius
+                x2 = y[0] + radius
+                y1 = y[1] - radius
+                y2 = y[1] + radius
+                draw.ellipse(
+                    [x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0
+                )
 
         if connectivity:
             for connection in connectivity:
-                    if kpt_inst[connection[0]] is not None and kpt_inst[connection[1]] is not None:
-                        start_pt_x = kpt_inst[connection[0]][0]
-                        start_pt_y = kpt_inst[connection[0]][1]
+                if x[connection[0]][2] is not 0 and x[connection[1]][2] is not 0:
+                    start_pt_x = x[connection[0]][0]
+                    start_pt_y = x[connection[0]][1]
 
-                        end_pt_x = kpt_inst[connection[1]][0]
-                        end_pt_y = kpt_inst[connection[1]][1]
+                    end_pt_x = x[connection[1]][0]
+                    end_pt_y = x[connection[1]][1]
 
-                        draw.line(
-                            ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
-                            width=width,
-                            fill=line_color,
-                        )
+                    draw.line(
+                        ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
+                        width=width,
+                        fill=line_color,
+                    )
 
     return np.array(img_to_draw)
 

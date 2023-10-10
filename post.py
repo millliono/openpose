@@ -180,6 +180,7 @@ def group_limbs(connections):
 
 
 def group_parts(groups):
+    # get the unique parts for each group of limbs
     person_parts = []
 
     for x in groups:
@@ -246,9 +247,9 @@ def coco_format(part_groups):
     keypoints = []
 
     for x in part_groups:
-        my_list = [None] * 17
+        my_list = [[0,0,0]] * 17
         for y in x:
-            my_list[y["part_id"]] = y["coords"].tolist()
+            my_list[y["part_id"]] = (y["coords"].tolist() + [1])
         keypoints.append(my_list)
 
     return keypoints
