@@ -60,11 +60,12 @@ def main():
     model = openpose().to(device)
     if device == "cuda":
         model = torch.nn.DataParallel(model).cuda()
+        
+        # freeze vgg19 layers
+        for param in model.module.backbone.ten_first_layers.parameters():
+            param.requires_grad = False
     model.train()
 
-    # freeze vgg19 layers
-    for param in model.module.backbone.ten_first_layers.parameters():
-        param.requires_grad = False
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
