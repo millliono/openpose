@@ -7,20 +7,23 @@ import dataset_utils
 import torch.utils.data as data
 import torch
 
+
 class CocoKeypoints(data.Dataset):
     def __init__(
         self,
         root,
         annFile,
-        input_transform,
-        heatmaps_transform,
-        pafs_transform,
+        input_transform=None,
+        heatmaps_transform=None,
+        pafs_transform=None,
+        train=True,
     ) -> None:
         from pycocotools.coco import COCO
 
         self.root = root
         self.coco = COCO(annFile)
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
+        self.train = train
 
         self.input_transform = input_transform
         self.heatmaps_transform = heatmaps_transform
@@ -54,22 +57,24 @@ class CocoKeypoints(data.Dataset):
         image = self._load_image(id)
         target = self._load_target(id)
 
-        mask_out = dataset_utils.get_mask_out(image, target, self.coco)
-
-        image_size = image.size
+        orig_size = image.size
         # input transforms
         if self.input_transform is not None:
             input_image = self.input_transform(image)
+            if not self.train:
+                return input_image, orig_size, id
 
-        target_new = self.list_of_dicts_to_dict_of_lists(target)
+        mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
-        keypoints = np.array(target_new["keypoints"]).reshape(-1, 17, 3)
+        targ = self.list_of_dicts_to_dict_of_lists(target)
+
+        keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
         keypoints = keypoints.tolist()
 
         heatmaps = dataset_utils.get_heatmaps(
-            keypoints, size=image_size, visibility=[1, 2]
+            keypoints, size=orig_size, visibility=[1, 2]
         )
-        pafs = dataset_utils.get_pafs(keypoints, size=image_size, visibility=[1, 2])
+        pafs = dataset_utils.get_pafs(keypoints, size=orig_size, visibility=[1, 2])
 
         # target transforms
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
