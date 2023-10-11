@@ -7,7 +7,9 @@ import post
 import numpy as np
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import pandas as pd
+import json
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
 
 inp_size = (368, 368)
 targ_size = (46, 46)
@@ -32,7 +34,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu" # comment when using modern gpu
+device = "cpu"  # comment when using modern gpu
 if device == "cuda":
     device = "cuda:0"
     model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
@@ -74,5 +76,23 @@ with torch.no_grad():
                 }
                 my_list.append(person)
 
-    pred_df = pd.DataFrame(my_list)
-    pred_df.to_csv("predictions.csv", index=False)
+    with open("predictions.json", "w") as f:
+        json.dump(my_list, f)
+    
+    annFile = str(
+        pathlib.Path("../coco")
+        / "annotations"
+        / "annotations"
+        / "person_keypoints_val2017.json"
+    )
+    cocoGt = COCO(annFile)  # load annotations
+    cocoDt = cocoGt.loadRes('predictions.json')  # load model outputs
+
+    # running evaluation
+    cocoEval = COCOeval(cocoGt, cocoDt, 'keypoints')
+    cocoEval.params.imgIds = coco_dataset.ids
+    cocoEval.evaluate()
+    cocoEval.accumulate()
+    cocoEval.summarize()
+    # return Average Precision
+    print(cocoEval.stats[0])
