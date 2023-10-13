@@ -127,8 +127,8 @@ def draw_keypoints(
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
-    radius: int = 3,
-    width: int = 3,
+    radius: int = 2,
+    width: int = 1,
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
@@ -159,7 +159,8 @@ def draw_keypoints(
                         fill=line_color,
                     )
 
-    return np.array(img_to_draw)
+    img = np.array(img_to_draw)
+    plt.imshow(img)
 
 
 def surf_heatmap(heatmap):

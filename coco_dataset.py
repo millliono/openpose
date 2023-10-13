@@ -51,6 +51,13 @@ class CocoKeypoints(data.Dataset):
                 dict_of_lists[key].append(value)
         return dict(dict_of_lists)
 
+    def tf_resize_keypoints(self, keypoints, image_size, new_size):
+        # transform that resizes keypoints after image resizing transform
+        scale_x = new_size[0] / image_size[0]
+        scale_y = new_size[1] / image_size[1]
+        resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
+        return resized_keypoints
+
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
 
@@ -69,12 +76,13 @@ class CocoKeypoints(data.Dataset):
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
+        keypoints = self.tf_resize_keypoints(keypoints, orig_size, (46, 46))
         keypoints = keypoints.tolist()
 
         heatmaps = dataset_utils.get_heatmaps(
-            keypoints, size=orig_size, visibility=[1, 2]
+            keypoints, size=(46, 46), visibility=[1, 2]
         )
-        pafs = dataset_utils.get_pafs(keypoints, size=orig_size, visibility=[1, 2])
+        pafs = dataset_utils.get_pafs(keypoints, size=(46, 46), visibility=[1, 2])
 
         # target transforms
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)

@@ -85,7 +85,7 @@ def get_limb_scores(pafs, bodyparts, image_size):
                     criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores) # here 0.8 is too stringent
                     criterion2 = penalized_score > 0
 
-                    if criterion1 and criterion2:
+                    if True:
                         limb = {
                             "part_a": pka,
                             "part_b": pkb,
@@ -239,7 +239,7 @@ def post_process(image_size, heatmaps, pafs):
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
     supp = supress_low_conf_people(limb_groups)
-    part_groups = group_parts(supp)
+    part_groups = group_parts(limb_groups)
 
     return part_groups
 
@@ -256,9 +256,3 @@ def coco_format(part_groups):
 
     return keypoints
 
-
-def show_keypoints(image, keypoints):
-    res = show_utils.draw_keypoints(
-        image, keypoints, connectivity=common.connect_skeleton
-    )
-    plt.imshow(res)
