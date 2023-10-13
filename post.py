@@ -85,7 +85,7 @@ def get_limb_scores(pafs, bodyparts, image_size):
                     criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores) # here 0.8 is too stringent
                     criterion2 = penalized_score > 0
 
-                    if True:
+                    if criterion1 and criterion2:
                         limb = {
                             "part_a": pka,
                             "part_b": pkb,
@@ -217,19 +217,19 @@ def supress_low_conf_people(groups):
 
 
 def post_process(image_size, heatmaps, pafs):
-    heatmaps = transforms.functional.resize(
-        heatmaps,
-        (image_size[1], image_size[0]),
-        transforms.functional.InterpolationMode.BICUBIC,
-        antialias=False
-    )
+    # heatmaps = transforms.functional.resize(
+    #     heatmaps,
+    #     (image_size[1], image_size[0]),
+    #     transforms.functional.InterpolationMode.BICUBIC,
+    #     antialias=False
+    # )
 
-    pafs = transforms.functional.resize(
-        pafs,
-        (image_size[1], image_size[0]),
-        transforms.functional.InterpolationMode.NEAREST,
-        antialias=False
-    )
+    # pafs = transforms.functional.resize(
+    #     pafs,
+    #     (image_size[1], image_size[0]),
+    #     transforms.functional.InterpolationMode.NEAREST,
+    #     antialias=False
+    # )
 
     heatmaps = heatmaps.numpy()
     pafs = pafs.numpy()
@@ -239,7 +239,7 @@ def post_process(image_size, heatmaps, pafs):
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
     supp = supress_low_conf_people(limb_groups)
-    part_groups = group_parts(limb_groups)
+    part_groups = group_parts(supp)
 
     return part_groups
 

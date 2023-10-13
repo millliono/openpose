@@ -51,10 +51,9 @@ class CocoKeypoints(data.Dataset):
                 dict_of_lists[key].append(value)
         return dict(dict_of_lists)
 
-    def tf_resize_keypoints(self, keypoints, image_size, new_size):
-        # transform that resizes keypoints after image resizing transform
-        scale_x = new_size[0] / image_size[0]
-        scale_y = new_size[1] / image_size[1]
+    def tf_resize_keypoints(self, keypoints, old_size, new_size):
+        scale_x = new_size[0] / old_size[0]
+        scale_y = new_size[1] / old_size[1]
         resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
         return resized_keypoints
 
@@ -64,19 +63,19 @@ class CocoKeypoints(data.Dataset):
         image = self._load_image(id)
         target = self._load_target(id)
 
-        orig_size = image.size
+        old_size = image.size
         # input transforms
         if self.input_transform is not None:
             input_image = self.input_transform(image)
             if not self.train:
-                return input_image, orig_size, id
+                return input_image, old_size, id
 
         mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
-        keypoints = self.tf_resize_keypoints(keypoints, orig_size, (46, 46))
+        keypoints = self.tf_resize_keypoints(keypoints, old_size, (46, 46))
         keypoints = keypoints.tolist()
 
         heatmaps = dataset_utils.get_heatmaps(
@@ -86,12 +85,7 @@ class CocoKeypoints(data.Dataset):
 
         # target transforms
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
-        if self.heatmaps_transform is not None:
-            heatmaps = self.heatmaps_transform(heatmaps)
-
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
-        if self.pafs_transform is not None:
-            pafs = self.pafs_transform(pafs)
 
         return input_image, pafs, heatmaps, mask_out, keypoints, image, target
 
