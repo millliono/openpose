@@ -10,7 +10,7 @@ def get_heatmaps(keypoints, size, visibility):
             [person[part] for person in keypoints if person[part][2] in visibility]
         )
 
-    def get_gaussian(center, sigma=2, size=size):
+    def get_gaussian(center, sigma=1, size=size):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
         dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         gaussian = np.exp(-((dist / sigma) ** 2))

@@ -217,19 +217,19 @@ def supress_low_conf_people(groups):
 
 
 def post_process(image_size, heatmaps, pafs):
-    # heatmaps = transforms.functional.resize(
-    #     heatmaps,
-    #     (image_size[1], image_size[0]),
-    #     transforms.functional.InterpolationMode.BICUBIC,
-    #     antialias=False
-    # )
+    heatmaps = transforms.functional.resize(
+        heatmaps,
+        (image_size[1], image_size[0]),
+        transforms.functional.InterpolationMode.BICUBIC,
+        antialias=False
+    )
 
-    # pafs = transforms.functional.resize(
-    #     pafs,
-    #     (image_size[1], image_size[0]),
-    #     transforms.functional.InterpolationMode.NEAREST,
-    #     antialias=False
-    # )
+    pafs = transforms.functional.resize(
+        pafs,
+        (image_size[1], image_size[0]),
+        transforms.functional.InterpolationMode.NEAREST,
+        antialias=False
+    )
 
     heatmaps = heatmaps.numpy()
     pafs = pafs.numpy()

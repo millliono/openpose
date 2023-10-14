@@ -128,14 +128,14 @@ def draw_keypoints(
     keypoint_color="blue",
     line_color="yellow",
     radius: int = 2,
-    width: int = 1,
+    width: int = 2,
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
 
     for x in keypoints:
         for y in x:
-            if y[2] is not 0:
+            if y[2] != 0:
                 x1 = y[0] - radius
                 x2 = y[0] + radius
                 y1 = y[1] - radius
@@ -146,7 +146,7 @@ def draw_keypoints(
 
         if connectivity:
             for connection in connectivity:
-                if x[connection[0]][2] is not 0 and x[connection[1]][2] is not 0:
+                if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
                     start_pt_x = x[connection[0]][0]
                     start_pt_y = x[connection[0]][1]
 

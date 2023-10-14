@@ -52,9 +52,11 @@ class CocoKeypoints(data.Dataset):
         return dict(dict_of_lists)
 
     def tf_resize_keypoints(self, keypoints, old_size, new_size):
-        scale_x = new_size[0] / old_size[0]
-        scale_y = new_size[1] / old_size[1]
-        resized_keypoints = keypoints * np.array([scale_x, scale_y, 1])
+        scale_x = old_size[0] / new_size[0]
+        scale_y = old_size[1] / new_size[1]
+        resized_keypoints = (
+            (keypoints + np.array([0.5, 0.5, 0])) / np.array([scale_x, scale_y, 1])
+        ) - np.array([0.5, 0.5, 0])
         return resized_keypoints
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
