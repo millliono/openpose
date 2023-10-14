@@ -3,8 +3,7 @@ from scipy.ndimage import gaussian_filter, maximum_filter
 from scipy.ndimage import generate_binary_structure
 import common
 from torchvision import transforms
-import show_utils
-import matplotlib.pyplot as plt
+
 
 thresh1 = 0.3
 thresh2 = 0.05
@@ -82,7 +81,8 @@ def get_limb_scores(pafs, bodyparts, image_size):
                     penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
                     penalized_score = scores.mean() + penalty
 
-                    criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores) # here 0.8 is too stringent
+                    # here 0.8 is too stringent
+                    criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores)
                     criterion2 = penalized_score > 0
 
                     if criterion1 and criterion2:
@@ -205,37 +205,47 @@ def group_parts(groups):
 
     return unique
 
+
 def supress_low_conf_people(groups):
     keep = []
     for x in groups:
         score = 0
         for y in x:
             score += y["limb_score"] + y["part_a"]["score"] + y["part_b"]["score"]
-        if score/len(x) > 0.2 and len(x) >= 3:
+        if score / len(x) > 0.2 and len(x) >= 3:
             keep.append(x)
     return keep
 
 
-def post_process(image_size, heatmaps, pafs):
+def tf_resize_keypoints(keypoints, old_size, new_size):
+    scale_x = old_size[0] / new_size[0]
+    scale_y = old_size[1] / new_size[1]
+    resized_keypoints = (
+        (keypoints + np.array([0.5, 0.5, 0])) / np.array([scale_x, scale_y, 1])
+    ) - np.array([0.5, 0.5, 0])
+    return resized_keypoints
+
+
+def post_process(heatmaps, pafs):
     heatmaps = transforms.functional.resize(
         heatmaps,
-        (image_size[1], image_size[0]),
+        (368,368),
         transforms.functional.InterpolationMode.BICUBIC,
-        antialias=False
+        antialias=False,
     )
 
     pafs = transforms.functional.resize(
         pafs,
-        (image_size[1], image_size[0]),
+        (368,368),
         transforms.functional.InterpolationMode.NEAREST,
-        antialias=False
+        antialias=False,
     )
 
     heatmaps = heatmaps.numpy()
     pafs = pafs.numpy()
 
     bodyparts = get_bodyparts(heatmaps)
-    limb_scores = get_limb_scores(pafs, bodyparts, image_size)
+    limb_scores = get_limb_scores(pafs, bodyparts, (368,368))
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
     supp = supress_low_conf_people(limb_groups)
@@ -244,21 +254,16 @@ def post_process(image_size, heatmaps, pafs):
     return part_groups
 
 
-
-def coco_format(part_groups):
+def coco_format(part_groups, original_size):
     keypoints = []
 
     for x in part_groups:
-        my_list = [[0,0,0]] * 17
+        my_list = [[0, 0, 0]] * 17
         for y in x:
-            my_list[y["part_id"]] = (y["coords"].tolist() + [1])
+            my_list[y["part_id"]] = y["coords"].tolist() + [1]
         keypoints.append(my_list)
+    
+    keypoints = tf_resize_keypoints(keypoints, (368,368), original_size)
 
     return keypoints
 
-
-def show_keypoints(image, keypoints):
-    res = show_utils.draw_keypoints(
-        image, keypoints, connectivity=common.connect_skeleton
-    )
-    plt.imshow(res)
