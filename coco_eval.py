@@ -63,8 +63,8 @@ with torch.no_grad():
         for paf, htmp, orig_size, id in zip(
             pred_pafs.cpu(), pred_htmps.cpu(), orig_size, id
         ):
-            part_groups = post.post_process(orig_size.tolist(), htmp, paf)
-            keypoints = post.coco_format(part_groups)
+            part_groups = post.post_process(htmp, paf)
+            keypoints = post.coco_format(part_groups, orig_size)
             keypoints = np.array(keypoints).reshape(-1, 51)
 
             for x in keypoints:
@@ -78,7 +78,7 @@ with torch.no_grad():
 
     with open("predictions.json", "w") as f:
         json.dump(my_list, f)
-    
+
     annFile = str(
         pathlib.Path("../coco")
         / "annotations"
@@ -86,10 +86,10 @@ with torch.no_grad():
         / "person_keypoints_val2017.json"
     )
     cocoGt = COCO(annFile)  # load annotations
-    cocoDt = cocoGt.loadRes('predictions.json')  # load model outputs
+    cocoDt = cocoGt.loadRes("predictions.json")  # load model outputs
 
     # running evaluation
-    cocoEval = COCOeval(cocoGt, cocoDt, 'keypoints')
+    cocoEval = COCOeval(cocoGt, cocoDt, "keypoints")
     cocoEval.params.imgIds = coco_dataset.ids
     cocoEval.evaluate()
     cocoEval.accumulate()

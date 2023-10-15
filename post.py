@@ -263,7 +263,8 @@ def coco_format(part_groups, original_size):
             my_list[y["part_id"]] = y["coords"].tolist() + [1]
         keypoints.append(my_list)
     
-    keypoints = tf_resize_keypoints(keypoints, (368,368), original_size)
+    if keypoints:
+        keypoints = tf_resize_keypoints(keypoints, (368,368), original_size)
 
     return keypoints
 
