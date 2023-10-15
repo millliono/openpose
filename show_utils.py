@@ -24,8 +24,8 @@ def show_tensors(imgs):
         fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(4, 4))
     for i, img in enumerate(imgs):
         img = img.detach()
-        img = F.to_pil_image(img)
-        axs[0, i].imshow(np.asarray(img))
+        img = img.numpy()
+        axs[0, i].imshow(img)
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
