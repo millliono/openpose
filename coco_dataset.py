@@ -78,7 +78,7 @@ class CocoKeypoints(data.Dataset):
         if self.input_transform is not None:
             input_image = self.input_transform(image)
             if not self.train:
-                return input_image, old_size, id
+                return input_image, torch.tensor(old_size), id
 
         mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
