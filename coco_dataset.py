@@ -54,10 +54,18 @@ class CocoKeypoints(data.Dataset):
     def tf_resize_keypoints(self, keypoints, old_size, new_size):
         scale_x = old_size[0] / new_size[0]
         scale_y = old_size[1] / new_size[1]
-        resized_keypoints = (
-            (keypoints + np.array([0.5, 0.5, 0])) / np.array([scale_x, scale_y, 1])
-        ) - np.array([0.5, 0.5, 0])
-        return resized_keypoints
+
+        visibility = keypoints[:, :, 2].reshape(-1, 17, 1)
+        visible = np.where(visibility > 0, 1, 0)
+
+        coords = keypoints[:, :, :2].reshape(-1, 17, 2)
+        resized = (coords + np.array([0.5, 0.5])) / np.array(
+            [scale_x, scale_y]
+        ) - np.array([0.5, 0.5])
+
+        resized = resized * visible
+        res = np.concatenate((resized, visibility), axis=2)
+        return res
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
