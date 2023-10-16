@@ -180,7 +180,7 @@ def group_limbs(connections):
     return groups
 
 
-def group_parts(groups):
+def group_keypoints(groups):
     # get the unique parts for each group of limbs
     person_parts = []
 
@@ -258,20 +258,19 @@ def post_process(heatmaps, pafs):
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
     supp = supress_low_conf_people(limb_groups)
-    part_groups = group_parts(supp)
+    kpt_groups = group_keypoints(supp)
 
-    return part_groups
+    return kpt_groups
 
 
 def coco_format(part_groups, original_size):
-    if part_groups:
-        keypoints = []
-        for x in part_groups:
-            my_list = [[0, 0, 0]] * 17
-            for y in x:
-                my_list[y["part_id"]] = y["coords"].tolist() + [1]
-            keypoints.append(my_list)
+    keypoints = []
+    for x in part_groups:
+        my_list = [[0, 0, 0]] * 17
+        for y in x:
+            my_list[y["part_id"]] = y["coords"].tolist() + [1]
+        keypoints.append(my_list)
 
-        keypoints = np.array(keypoints)
-        keypoints = tf_resize_keypoints(keypoints, (368, 368), original_size)
-        return keypoints
+    keypoints = np.array(keypoints)
+    keypoints = tf_resize_keypoints(keypoints, (368, 368), original_size)
+    return keypoints

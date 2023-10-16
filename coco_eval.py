@@ -38,7 +38,7 @@ device = "cpu"  # comment when using modern gpu
 if device == "cuda":
     device = "cuda:0"
     model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
-    model.load_state_dict(torch.load("save_model.pth"))
+    model.load_state_dict(torch.load("save_modelGG.pth"))
 else:
     model = model.openpose()
 print(device)
@@ -56,25 +56,25 @@ test_loader = DataLoader(
 loop = tqdm(test_loader, leave=True)
 with torch.no_grad():
     my_list = []
-    for batch_idx, (input_image, orig_size, id) in enumerate(loop):
-        input_image = input_image.to(device)
-        pred_pafs, pred_htmps, _, _ = model(input_image)
+    for batch_idx, (input_images, orig_sizes, ids) in enumerate(loop):
+        input_images = input_images.to(device)
+        pred_pafs, pred_htmps, _, _ = model(input_images)
 
-        for paf, htmp, orig_size, id in zip(
-            pred_pafs.cpu(), pred_htmps.cpu(), orig_size, id
-        ):
-            part_groups = post.post_process(htmp, paf)
-            keypoints = post.coco_format(part_groups, orig_size)
-            keypoints = np.array(keypoints).reshape(-1, 51)
+        for paf, htmp, og_size, id in zip(pred_pafs.cpu(), pred_htmps.cpu(), orig_sizes, ids):
+            kpt_groups = post.post_process(htmp, paf)
+            if kpt_groups:
+                keypoints = post.coco_format(kpt_groups, og_size.tolist())
+                keypoints = np.array(keypoints).reshape(-1, 51)
+                keypoints = keypoints.tolist()
 
-            for x in keypoints:
-                person = {
-                    "image_id": id.item(),
-                    "category_id": 1,
-                    "keypoints": x.tolist(),
-                    "score": 1,
-                }
-                my_list.append(person)
+                for x in keypoints:
+                    person = {
+                        "image_id": id.item(),
+                        "category_id": 1,
+                        "keypoints": x,
+                        "score": 1,
+                    }
+                    my_list.append(person)
 
     with open("predictions.json", "w") as f:
         json.dump(my_list, f)
