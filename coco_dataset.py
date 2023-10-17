@@ -31,7 +31,7 @@ class CocoKeypoints(data.Dataset):
 
     def exists_keypoint_annotation(self, img_id):
         target = self._load_target(img_id)
-        keypoint_anns = [tar for tar in target if tar["num_keypoints"] > 0]
+        keypoint_anns = [x for x in target if x["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
@@ -41,7 +41,7 @@ class CocoKeypoints(data.Dataset):
                 dict_of_lists[key].append(value)
         return dict(dict_of_lists)
 
-    def tf_resize_keypoints(self, keypoints, old_size, new_size):
+    def resize_keypoints(self, keypoints, old_size, new_size):
         scale_x = old_size[0] / new_size[0]
         scale_y = old_size[1] / new_size[1]
 
@@ -61,19 +61,18 @@ class CocoKeypoints(data.Dataset):
         image = self._load_image(id)
         target = self._load_target(id)
 
-        old_size = image.size
         # input transforms
-        if self.input_transform is not None:
-            input_image = self.input_transform(image)
-            if not self.train:
-                return input_image, torch.tensor(old_size), id
+        tf_image = self.input_transform(image)
+        
+        if not self.train:
+            return tf_image, torch.tensor(image.size), id
 
         mask_out = dataset_utils.get_mask_out(image, target, self.coco)
 
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
-        keypoints = self.tf_resize_keypoints(keypoints, old_size, (46, 46))
+        keypoints = self.resize_keypoints(keypoints, image.size, (46, 46))
         keypoints = keypoints.tolist()
 
         heatmaps = dataset_utils.get_heatmaps(keypoints, size=(46, 46), visibility=[1, 2])
@@ -83,7 +82,7 @@ class CocoKeypoints(data.Dataset):
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
 
-        return input_image, pafs, heatmaps, mask_out, keypoints, image, target
+        return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
 
     def __len__(self) -> int:
         return len(self.ids)

@@ -209,7 +209,7 @@ def supress_low_conf_people(groups):
     return keep
 
 
-def tf_resize_keypoints(keypoints, old_size, new_size):
+def resize_keypoints(keypoints, old_size, new_size):
     scale_x = old_size[0] / new_size[0]
     scale_y = old_size[1] / new_size[1]
 
@@ -261,5 +261,5 @@ def coco_format(part_groups, original_size):
         keypoints.append(my_list)
 
     keypoints = np.array(keypoints)
-    keypoints = tf_resize_keypoints(keypoints, (368, 368), original_size)
+    keypoints = resize_keypoints(keypoints, (368, 368), original_size)
     return keypoints

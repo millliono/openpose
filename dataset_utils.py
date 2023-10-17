@@ -5,9 +5,9 @@ import torchvision.transforms.functional as F
 
 
 def get_heatmaps(keypoints, size, visibility):
-    parts_coords = []
-    for part in range(17):
-        parts_coords.append([person[part] for person in keypoints if person[part][2] in visibility])
+    parts = []
+    for i in range(17):
+        parts.append([x[i] for x in keypoints if x[i][2] in visibility])
 
     def get_gaussian(center, sigma=1, size=size):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
@@ -16,10 +16,10 @@ def get_heatmaps(keypoints, size, visibility):
         return gaussian
 
     heatmaps = []
-    for part in parts_coords:
-        temp = [get_gaussian((kpt[0], kpt[1])) for kpt in part]
-        if temp:
-            heatmaps.append(np.maximum.reduce(temp))
+    for x in parts:
+        my_list = [get_gaussian((y[0], y[1])) for y in x]
+        if my_list:
+            heatmaps.append(np.maximum.reduce(my_list))
         else:
             heatmaps.append(np.zeros((size[1], size[0])))
 
@@ -63,8 +63,8 @@ def get_limb_pafs(person, visibility, limb, size):
 
 def get_pafs(keypoints, size, visibility):
     pafs = []
-    for limb in common.connect_skeleton:
-        res = [get_limb_pafs(person, visibility, limb, size) for person in keypoints]
+    for x in common.connect_skeleton:
+        res = [get_limb_pafs(y, visibility, x, size) for y in keypoints]
         limb_paf, paf_locs = zip(*res)
 
         paf_locs = np.add.reduce(paf_locs)

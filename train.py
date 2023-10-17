@@ -27,7 +27,7 @@ def train_fn(train_loader, model, optimizer, loss_fn, device):
         targ_heatmaps = targ_heatmaps.to(device)
         mask_out = mask_out.to(device)
 
-        pred_pafs, pred_htmps, save_for_loss_pafs, save_for_loss_htmps = model(image)
+        _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
         loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps, mask_out)
         print(f"Batch-({batch_idx}) loss was {loss}")
@@ -53,16 +53,18 @@ def collate_fn(batch):
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = "cpu"  # comment when using modern gpu
+    device = "cpu"  # comment if using modern gpu
 
-    model = openpose().to(device)
     if device == "cuda":
-        model = torch.nn.DataParallel(model).cuda()
+        model = torch.nn.DataParallel(openpose()).cuda()
 
         # freeze vgg19 layers
         for param in model.module.backbone.ten_first_layers.parameters():
             param.requires_grad = False
+    else:
+        model = openpose()
     model.train()
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     loss_fn = PoseLoss()

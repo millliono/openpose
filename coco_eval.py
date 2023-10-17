@@ -41,7 +41,6 @@ if device == "cuda":
     model.load_state_dict(torch.load("save_modelGG.pth"))
 else:
     model = model.openpose()
-print(device)
 model.eval()
 
 
