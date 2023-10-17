@@ -114,9 +114,7 @@ def show_pafs_quiver_combined(pafs, size):
     paf_y = torch.sum(torch.stack(paf_y), dim=0)
 
     px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
-    plt.quiver(
-        px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail"
-    )
+    plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail")
     plt.gca().invert_yaxis()
 
 
@@ -140,9 +138,7 @@ def draw_keypoints(
                 x2 = y[0] + radius
                 y1 = y[1] - radius
                 y2 = y[1] + radius
-                draw.ellipse(
-                    [x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0
-                )
+                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
 
         if connectivity:
             for connection in connectivity:

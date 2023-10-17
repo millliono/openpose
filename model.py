@@ -4,8 +4,8 @@ from torchvision.models import vgg19_bn, VGG19_BN_Weights
 
 vgg19 = vgg19_bn(weights=VGG19_BN_Weights.DEFAULT)
 
-
 class backbone(nn.Module):
+
     def __init__(self):
         super(backbone, self).__init__()
         self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:33])
@@ -25,6 +25,7 @@ class backbone(nn.Module):
 
 
 class conv_block(nn.Module):
+
     def __init__(self, in_channels, out_channels, use_relu=True, **kwargs):
         super(conv_block, self).__init__()
 
@@ -45,6 +46,7 @@ class conv_block(nn.Module):
 
 
 class conv_triplet(nn.Module):
+
     def __init__(self, in_channels_0, out_channels_indiv, **kwargs):
         super(conv_triplet, self).__init__()
 
@@ -86,27 +88,16 @@ class conv_triplet(nn.Module):
 
 # inner part affinity and heatmap map block
 class inner_block(nn.Module):
+
     def __init__(self, in_channels, out_channels_indiv, conv6, conv7):
         super(inner_block, self).__init__()
 
-        self.conv_triplet1 = conv_triplet(
-            in_channels_0=in_channels, out_channels_indiv=out_channels_indiv
-        )
-        self.conv_triplet2 = conv_triplet(
-            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
-        )
-        self.conv_triplet3 = conv_triplet(
-            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
-        )
-        self.conv_triplet4 = conv_triplet(
-            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
-        )
-        self.conv_triplet5 = conv_triplet(
-            in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv
-        )
-        self.conv6 = conv_block(
-            in_channels=conv6[0], out_channels=conv6[1], use_relu=True, kernel_size=1
-        )
+        self.conv_triplet1 = conv_triplet(in_channels_0=in_channels, out_channels_indiv=out_channels_indiv)
+        self.conv_triplet2 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
+        self.conv_triplet3 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
+        self.conv_triplet4 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
+        self.conv_triplet5 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
+        self.conv6 = conv_block(in_channels=conv6[0], out_channels=conv6[1], use_relu=True, kernel_size=1)
         self.conv7 = conv_block(
             in_channels=conv7[0],
             out_channels=conv7[1],  # (the number of affinity vectors)
@@ -126,30 +117,19 @@ class inner_block(nn.Module):
 
 
 class openpose(nn.Module):
+
     def __init__(self):
         super(openpose, self).__init__()
 
         self.backbone = backbone()
 
-        self.paf0 = inner_block(
-            in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 32]
-        )
-        self.paf1 = inner_block(
-            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
-        )
-        self.paf2 = inner_block(
-            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
-        )
-        self.paf3 = inner_block(
-            in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32]
-        )
+        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 32])
+        self.paf1 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
+        self.paf2 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
+        self.paf3 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
 
-        self.htmp0 = inner_block(
-            in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 17]
-        )
-        self.htmp1 = inner_block(
-            in_channels=177, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 17]
-        )
+        self.htmp0 = inner_block(in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 17])
+        self.htmp1 = inner_block(in_channels=177, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 17])
 
     def forward(self, x):
         save_for_loss_pafs = []

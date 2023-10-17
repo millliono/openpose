@@ -3,24 +3,23 @@ import common
 import torch
 import torchvision.transforms.functional as F
 
+
 def get_heatmaps(keypoints, size, visibility):
     parts_coords = []
     for part in range(17):
-        parts_coords.append(
-            [person[part] for person in keypoints if person[part][2] in visibility]
-        )
+        parts_coords.append([person[part] for person in keypoints if person[part][2] in visibility])
 
     def get_gaussian(center, sigma=1, size=size):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
-        dist = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        gaussian = np.exp(-((dist / sigma) ** 2))
+        dist = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+        gaussian = np.exp(-((dist / sigma)**2))
         return gaussian
 
     heatmaps = []
     for part in parts_coords:
         temp = [get_gaussian((kpt[0], kpt[1])) for kpt in part]
         if temp:
-            heatmaps.append(np.maximum.reduce(temp))  # paper says take max
+            heatmaps.append(np.maximum.reduce(temp))
         else:
             heatmaps.append(np.zeros((size[1], size[0])))
 
@@ -34,7 +33,7 @@ def get_limb_pafs(person, visibility, limb, size):
         part1 = np.array([person[limb[0]][0], person[limb[0]][1]])
         part2 = np.array([person[limb[1]][0], person[limb[1]][1]])
         v = part2 - part1
-        v_magn = np.sqrt(v[0] ** 2 + v[1] ** 2) + 1e-8
+        v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-8
         v_norm = v / v_magn
 
         px, py = np.meshgrid(np.arange(size[0]), np.arange(size[1]))

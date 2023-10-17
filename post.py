@@ -4,7 +4,6 @@ from scipy.ndimage import generate_binary_structure
 import common
 from torchvision import transforms
 
-
 thresh1 = 0.3
 thresh2 = 0.05
 
@@ -14,9 +13,7 @@ def get_bodyparts(heatmaps):
     unique_id = 0
 
     for i in range(len(heatmaps)):
-        filtered = maximum_filter(
-            heatmaps[i], footprint=generate_binary_structure(2, 1)
-        )
+        filtered = maximum_filter(heatmaps[i], footprint=generate_binary_structure(2, 1))
         peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > thresh1))
 
         # if no peaks found
@@ -61,16 +58,12 @@ def get_limb_scores(pafs, bodyparts, image_size):
             for pka in partsA:
                 for pkb in partsB:
                     v = pkb["coords"] - pka["coords"]
-                    v_magn = np.sqrt(v[0] ** 2 + v[1] ** 2) + 1e-8
+                    v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-8
                     v_norm = v / v_magn
 
                     # line
-                    line_x = np.round(
-                        np.linspace(pka["coords"][0], pkb["coords"][0], 10)
-                    ).astype(int)
-                    line_y = np.round(
-                        np.linspace(pka["coords"][1], pkb["coords"][1], 10)
-                    ).astype(int)
+                    line_x = np.round(np.linspace(pka["coords"][0], pkb["coords"][0], 10)).astype(int)
+                    line_y = np.round(np.linspace(pka["coords"][1], pkb["coords"][1], 10)).astype(int)
 
                     # flip indexing for ij coords
                     paf_x = pafx[line_y, line_x]
@@ -114,9 +107,7 @@ def get_connections(limb_scores, bodyparts):
             num_b = len(bodyparts[partB_id])
             max_connections = min(num_a, num_b)
 
-            limb_scores[i] = sorted(
-                limb_scores[i], key=lambda x: x["limb_score"], reverse=True
-            )
+            limb_scores[i] = sorted(limb_scores[i], key=lambda x: x["limb_score"], reverse=True)
 
             my_list = []
             used = []
@@ -226,9 +217,7 @@ def tf_resize_keypoints(keypoints, old_size, new_size):
     visible = np.where(visibility > 0, 1, 0)
 
     coords = keypoints[:, :, :2].reshape(-1, 17, 2)
-    resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array(
-        [0.5, 0.5]
-    )
+    resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5])
 
     resized = resized * visible
     res = np.concatenate((resized, visibility), axis=2)

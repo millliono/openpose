@@ -9,25 +9,15 @@ import torch
 
 
 class CocoKeypoints(data.Dataset):
-    def __init__(
-        self,
-        root,
-        annFile,
-        input_transform=None,
-        heatmaps_transform=None,
-        pafs_transform=None,
-        train=True,
-    ) -> None:
+
+    def __init__(self, root, annFile, input_transform=None, train=True):
         from pycocotools.coco import COCO
 
         self.root = root
         self.coco = COCO(annFile)
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
-        self.train = train
-
         self.input_transform = input_transform
-        self.heatmaps_transform = heatmaps_transform
-        self.pafs_transform = pafs_transform
+        self.train = train
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -59,9 +49,7 @@ class CocoKeypoints(data.Dataset):
         visible = np.where(visibility > 0, 1, 0)
 
         coords = keypoints[:, :, :2].reshape(-1, 17, 2)
-        resized = (coords + np.array([0.5, 0.5])) / np.array(
-            [scale_x, scale_y]
-        ) - np.array([0.5, 0.5])
+        resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5])
 
         resized = resized * visible
         res = np.concatenate((resized, visibility), axis=2)
@@ -88,9 +76,7 @@ class CocoKeypoints(data.Dataset):
         keypoints = self.tf_resize_keypoints(keypoints, old_size, (46, 46))
         keypoints = keypoints.tolist()
 
-        heatmaps = dataset_utils.get_heatmaps(
-            keypoints, size=(46, 46), visibility=[1, 2]
-        )
+        heatmaps = dataset_utils.get_heatmaps(keypoints, size=(46, 46), visibility=[1, 2])
         pafs = dataset_utils.get_pafs(keypoints, size=(46, 46), visibility=[1, 2])
 
         # target transforms

@@ -29,9 +29,7 @@ def train_fn(train_loader, model, optimizer, loss_fn, device):
 
         pred_pafs, pred_htmps, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
-        loss = loss_fn(
-            save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps, mask_out
-        )
+        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps, mask_out)
         print(f"Batch-({batch_idx}) loss was {loss}")
 
         mean_loss.append(loss.item())
@@ -60,35 +58,24 @@ def main():
     model = openpose().to(device)
     if device == "cuda":
         model = torch.nn.DataParallel(model).cuda()
-        
+
         # freeze vgg19 layers
         for param in model.module.backbone.ten_first_layers.parameters():
             param.requires_grad = False
     model.train()
 
-
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
-    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     loss_fn = PoseLoss()
 
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
-        annFile=str(
-            pathlib.Path("../coco")
-            / "annotations"
-            / "annotations"
-            / "person_keypoints_train2017.json"
-        ),
-        input_transform=transforms.Compose(
-            [
-                transforms.Resize((368,368)),
-                transforms.ToTensor(),
-                transforms.ConvertImageDtype(torch.float32),
-                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            ]
-        )
-    )
+        annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
+        input_transform=transforms.Compose([
+            transforms.Resize((368, 368)),
+            transforms.ToTensor(),
+            transforms.ConvertImageDtype(torch.float32),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ]))
 
     train_loader = DataLoader(
         dataset=train_dataset,

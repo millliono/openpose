@@ -3,6 +3,7 @@ import torch.nn as nn
 
 
 class PoseLoss(nn.Module):
+
     def __init__(self):
         super().__init__()
         self.mse = nn.MSELoss()
@@ -21,5 +22,3 @@ class PoseLoss(nn.Module):
             total_loss += self.mse(htmp, htmp_target)
 
         return total_loss
-
-
