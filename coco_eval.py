@@ -22,8 +22,8 @@ coco_dataset = coco_dataset.CocoKeypoints(
         transforms.ConvertImageDtype(torch.float32),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ]),
-    targ_size=targ_size)
-
+    targ_size=targ_size,
+    train=False)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device = "cpu"  # comment when using modern gpu
@@ -34,7 +34,6 @@ if device == "cuda":
 else:
     model = model.openpose()
 model.eval()
-
 
 test_loader = DataLoader(
     dataset=coco_dataset,
@@ -70,12 +69,7 @@ with torch.no_grad():
     with open("predictions.json", "w") as f:
         json.dump(my_list, f)
 
-    annFile = str(
-        pathlib.Path("../coco")
-        / "annotations"
-        / "annotations"
-        / "person_keypoints_val2017.json"
-    )
+    annFile = str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json")
     cocoGt = COCO(annFile)  # load annotations
     cocoDt = cocoGt.loadRes("predictions.json")  # load model outputs
 
