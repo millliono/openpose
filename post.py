@@ -4,17 +4,13 @@ from scipy.ndimage import generate_binary_structure
 import common
 from torchvision import transforms
 
-thresh1 = 0.3
-thresh2 = 0.05
-
-
 def get_bodyparts(heatmaps):
     all_bodyparts = []
     unique_id = 0
 
     for i in range(len(heatmaps)):
         filtered = maximum_filter(heatmaps[i], footprint=generate_binary_structure(2, 1))
-        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > thresh1))
+        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > 0.3))
 
         # if no peaks found
         if peaks_coords[0].size == 0:
@@ -76,7 +72,7 @@ def get_limb_scores(pafs, bodyparts, image_size):
                     penalized_score = scores.mean() + penalty
 
                     # here 0.8 is too stringent
-                    criterion1 = np.count_nonzero(scores > thresh2) > 0.8 * len(scores)
+                    criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
                     criterion2 = penalized_score > 0
 
                     if criterion1 and criterion2:
@@ -235,7 +231,7 @@ def post_process(heatmaps, pafs):
     pafs = transforms.functional.resize(
         pafs,
         (368, 368),
-        transforms.functional.InterpolationMode.NEAREST,
+        transforms.functional.InterpolationMode.BICUBIC,
         antialias=False,
     )
 
