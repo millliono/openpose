@@ -68,7 +68,7 @@ def show_pafs_quiver(pafs, keypoints, size):
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
-    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(17, 15))
+    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(15, 12))
 
     if num_rows == 1:
         axes = axes.reshape(1, -1)

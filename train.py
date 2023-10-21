@@ -69,15 +69,18 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     loss_fn = PoseLoss()
 
+    inp_size = (368, 368)
+    targ_size = (46, 46)
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
         input_transform=transforms.Compose([
-            transforms.Resize((368, 368)),
+            transforms.Resize(inp_size),
             transforms.ToTensor(),
             transforms.ConvertImageDtype(torch.float32),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]))
+        ]),
+        targ_size=targ_size)
 
     train_loader = DataLoader(
         dataset=train_dataset,

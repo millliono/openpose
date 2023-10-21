@@ -15,22 +15,14 @@ inp_size = (368, 368)
 targ_size = (46, 46)
 coco_dataset = coco_dataset.CocoKeypoints(
     root=str(pathlib.Path("../coco") / "images" / "val2017"),
-    annFile=str(
-        pathlib.Path("../coco")
-        / "annotations"
-        / "annotations"
-        / "person_keypoints_val2017.json"
-    ),
-    input_transform=transforms.Compose(
-        [
-            transforms.Resize(inp_size),
-            transforms.ToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]
-    ),
-    train=False,
-)
+    annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
+    input_transform=transforms.Compose([
+        transforms.Resize(inp_size),
+        transforms.ToTensor(),
+        transforms.ConvertImageDtype(torch.float32),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ]),
+    targ_size=targ_size)
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -47,7 +39,7 @@ model.eval()
 test_loader = DataLoader(
     dataset=coco_dataset,
     batch_size=2,
-    num_workers=5,
+    num_workers=6,
     shuffle=False,
     drop_last=True,
 )
