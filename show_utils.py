@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import torchvision.transforms.functional as F
 import numpy as np
 from PIL import ImageDraw
+import common
 
 
 def show_coco(image, target, coco, draw_bbox):
@@ -59,7 +60,7 @@ def show_pafs(pafs):
     show_tensors(my_list)
 
 
-def show_pafs_quiver(pafs, size):
+def show_pafs_quiver(pafs, keypoints, size):
     """
     shows all (16) pafs as vector fields using subplots
     """
@@ -67,35 +68,41 @@ def show_pafs_quiver(pafs, size):
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
-    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(12, 9))
+    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(17, 15))
 
     if num_rows == 1:
         axes = axes.reshape(1, -1)
     elif num_cols == 1:
         axes = axes.reshape(-1, 1)
 
-    paf_x = []
-    for i in range(0, pafs.size(dim=0), 2):
-        paf_x.append(pafs[i])
 
-    paf_y = []
-    for i in range(1, pafs.size(dim=0), 2):
-        paf_y.append(pafs[i])
+    for i in range(len(pafs) // 2):
+        partA_id = common.connect_skeleton[i][0]
+        partB_id = common.connect_skeleton[i][1]
 
-    for i in range(len(paf_x)):
+        partsA = [x[partA_id] for x in keypoints]
+        partsB = [x[partB_id] for x in keypoints]
+
+        pafx = pafs[2 * i]
+        pafy = pafs[2 * i + 1]
+
         px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
         row_idx = i // num_cols
         col_idx = i % num_cols
         axes[row_idx, col_idx].quiver(
             px,
             py,
-            paf_x[i],
-            paf_y[i],
+            pafx,
+            pafy,
             scale=1,
             scale_units="xy",
             angles="xy",
             pivot="tail",
         )
+
+        axes[row_idx, col_idx].scatter([x[0] for x in partsA], [x[1] for x in partsA], color='r', s=3)
+        axes[row_idx, col_idx].scatter([x[0] for x in partsB], [x[1] for x in partsB], color='b', s=3)
+        # axes[row_idx, col_idx].scatter(-0, -0, color='r', s=5)
         axes[row_idx, col_idx].invert_yaxis()
 
     plt.tight_layout()

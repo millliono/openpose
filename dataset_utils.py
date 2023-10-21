@@ -80,7 +80,7 @@ def get_pafs(keypoints, size, visibility):
     return pafs
 
 
-def get_mask_out(image, target, coco):
+def get_mask_out(image, target, coco, size):
     masks = [coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
     if masks:
         mask_out = np.add.reduce(masks)
@@ -88,5 +88,5 @@ def get_mask_out(image, target, coco):
     else:
         mask_out = np.ones((image.size[1], image.size[0]))
     mask_out = torch.tensor(mask_out, dtype=torch.float32)
-    mask_out = F.resize(mask_out.unsqueeze_(0), (46, 46), F.InterpolationMode.NEAREST)
+    mask_out = F.resize(mask_out.unsqueeze_(0), size, F.InterpolationMode.NEAREST)
     return mask_out
