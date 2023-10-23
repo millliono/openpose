@@ -128,8 +128,8 @@ class openpose(nn.Module):
         self.paf2 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
         self.paf3 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
 
-        self.htmp0 = inner_block(in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 17])
-        self.htmp1 = inner_block(in_channels=177, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 17])
+        self.htmp0 = inner_block(in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 18])
+        self.htmp1 = inner_block(in_channels=178, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 18])
 
     def forward(self, x):
         save_for_loss_pafs = []

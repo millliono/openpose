@@ -22,7 +22,8 @@ def get_heatmaps(keypoints, size, visibility):
             heatmaps.append(np.maximum.reduce(my_list))
         else:
             heatmaps.append(np.zeros((size[1], size[0])))
-
+    
+    heatmaps.append(np.zeros((size[1], size[0]))) # final heatmap: Background
     return heatmaps
 
 

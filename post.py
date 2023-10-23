@@ -9,11 +9,10 @@ def get_bodyparts(heatmaps):
     all_bodyparts = []
     unique_id = 0
 
-    for i in range(len(heatmaps)):
+    for i in range(len(heatmaps) - 1):  # exclude background heatmap
         filtered = maximum_filter(heatmaps[i], footprint=generate_binary_structure(2, 1))
         peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > 0.1))
 
-        # if no peaks found
         if peaks_coords[0].size == 0:
             all_bodyparts.append([])
 
