@@ -6,7 +6,7 @@ import torchvision.transforms.functional as F
 
 def get_heatmaps(keypoints, size, visibility):
     parts = []
-    for i in range(17):
+    for i in range(18):
         parts.append([x[i] for x in keypoints if x[i][2] in visibility])
 
     def get_gaussian(center, sigma=1, size=size):
@@ -91,3 +91,18 @@ def get_mask_out(image, target, coco, size):
     mask_out = torch.tensor(mask_out, dtype=torch.float32)
     mask_out = F.resize(mask_out.unsqueeze_(0), size, F.InterpolationMode.NEAREST)
     return mask_out
+
+def add_neck(keypoints, visibility):
+    for i in range(len(keypoints)):
+        l_should = np.asarray(keypoints[i][5])
+        r_should = np.asarray(keypoints[i][6])
+
+        neck = (l_should + r_should) / 2
+
+        if l_should[2] in visibility and r_should[2] in visibility:
+            neck[2] = 2
+        else:
+            neck[2] = l_should[2] * r_should[2]
+
+        keypoints[i].append(neck.tolist())
+    return keypoints

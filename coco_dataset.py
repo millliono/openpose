@@ -75,6 +75,7 @@ class CocoKeypoints(data.Dataset):
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
         keypoints = self.resize_keypoints(keypoints, image.size, self.targ_size)
         keypoints = keypoints.tolist()
+        keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
         heatmaps = dataset_utils.get_heatmaps(keypoints, self.targ_size, visibility=[1, 2])
         pafs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
@@ -87,3 +88,5 @@ class CocoKeypoints(data.Dataset):
 
     def __len__(self) -> int:
         return len(self.ids)
+
+
