@@ -4,13 +4,14 @@ from scipy.ndimage import generate_binary_structure
 import common
 from torchvision import transforms
 
+
 def get_bodyparts(heatmaps):
     all_bodyparts = []
     unique_id = 0
 
     for i in range(len(heatmaps)):
         filtered = maximum_filter(heatmaps[i], footprint=generate_binary_structure(2, 1))
-        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > 0.3))
+        peaks_coords = np.nonzero((filtered == heatmaps[i]) * (heatmaps[i] > 0.1))
 
         # if no peaks found
         if peaks_coords[0].size == 0:
@@ -205,32 +206,17 @@ def supress_low_conf_people(groups):
     return keep
 
 
-def resize_keypoints(keypoints, old_size, new_size):
-    scale_x = old_size[0] / new_size[0]
-    scale_y = old_size[1] / new_size[1]
-
-    visibility = keypoints[:, :, 2].reshape(-1, 17, 1)
-    visible = np.where(visibility > 0, 1, 0)
-
-    coords = keypoints[:, :, :2].reshape(-1, 17, 2)
-    resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5])
-
-    resized = resized * visible
-    res = np.concatenate((resized, visibility), axis=2)
-    return res
-
-
-def post_process(heatmaps, pafs):
+def post_process(heatmaps, pafs, image_size):
     heatmaps = transforms.functional.resize(
         heatmaps,
-        (368, 368),
+        tuple(reversed(image_size)),
         transforms.functional.InterpolationMode.BICUBIC,
         antialias=False,
     )
 
     pafs = transforms.functional.resize(
         pafs,
-        (368, 368),
+        tuple(reversed(image_size)),
         transforms.functional.InterpolationMode.BICUBIC,
         antialias=False,
     )
@@ -239,7 +225,7 @@ def post_process(heatmaps, pafs):
     pafs = pafs.numpy()
 
     bodyparts = get_bodyparts(heatmaps)
-    limb_scores = get_limb_scores(pafs, bodyparts, (368, 368))
+    limb_scores = get_limb_scores(pafs, bodyparts, image_size)
     connections = get_connections(limb_scores, bodyparts)
     limb_groups = group_limbs(connections)
     supp = supress_low_conf_people(limb_groups)
@@ -248,7 +234,7 @@ def post_process(heatmaps, pafs):
     return kpt_groups
 
 
-def coco_format(part_groups, original_size):
+def coco_format(part_groups):
     keypoints = []
     for x in part_groups:
         my_list = [[0, 0, 0]] * 17
@@ -257,5 +243,4 @@ def coco_format(part_groups, original_size):
         keypoints.append(my_list)
 
     keypoints = np.array(keypoints)
-    keypoints = resize_keypoints(keypoints, (368, 368), original_size)
     return keypoints

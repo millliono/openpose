@@ -17,7 +17,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
     root=str(pathlib.Path("../coco") / "images" / "val2017"),
     annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
     input_transform=transforms.Compose([
-        transforms.Resize(inp_size),
+        # transforms.Resize(inp_size),
         transforms.ToTensor(),
         transforms.ConvertImageDtype(torch.float32),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -51,9 +51,9 @@ with torch.no_grad():
         pred_pafs, pred_htmps, _, _ = model(input_images)
 
         for paf, htmp, og_size, id in zip(pred_pafs.cpu(), pred_htmps.cpu(), orig_sizes, ids):
-            kpt_groups = post.post_process(htmp, paf)
+            kpt_groups = post.post_process(htmp, paf, og_size.tolist())
             if kpt_groups:
-                keypoints = post.coco_format(kpt_groups, og_size.tolist())
+                keypoints = post.coco_format(kpt_groups)
                 keypoints = np.array(keypoints).reshape(-1, 51)
                 keypoints = keypoints.tolist()
 
