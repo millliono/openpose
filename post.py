@@ -233,13 +233,11 @@ def post_process(heatmaps, pafs, image_size):
     return kpt_groups
 
 
-def coco_format(part_groups):
+def coco_format(kpt_groups):
     keypoints = []
-    for x in part_groups:
+    for x in kpt_groups:
         my_list = [[0, 0, 0]] * 18
         for y in x:
             my_list[y["part_id"]] = y["coords"].tolist() + [1]
         keypoints.append(my_list)
-
-    keypoints = np.array(keypoints)
     return keypoints

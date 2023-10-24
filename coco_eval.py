@@ -37,7 +37,7 @@ model.eval()
 
 test_loader = DataLoader(
     dataset=coco_dataset,
-    batch_size=2,
+    batch_size=1,
     num_workers=6,
     shuffle=False,
     drop_last=True,
@@ -54,8 +54,14 @@ with torch.no_grad():
             kpt_groups = post.post_process(htmp, paf, og_size.tolist())
             if kpt_groups:
                 keypoints = post.coco_format(kpt_groups)
+                
+                # delete neck keypoint
+                for i in range(len(keypoints)):
+                    keypoints[i].pop()
+                    
                 keypoints = np.array(keypoints).reshape(-1, 51)
                 keypoints = keypoints.tolist()
+                
 
                 for x in keypoints:
                     person = {
