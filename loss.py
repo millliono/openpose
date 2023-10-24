@@ -7,7 +7,7 @@ class PoseLoss(nn.Module):
         super().__init__()
         self.mse = nn.MSELoss()
 
-    def forward(self, save_for_loss_pafs, save_for_loss_htmps, paf_target, htmp_target, mask_out):
+    def forward(self, save_for_loss_pafs, save_for_loss_htmps, paf_target, htmp_target):
         total_loss = 0
 
         for x in save_for_loss_pafs:

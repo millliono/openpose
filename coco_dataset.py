@@ -68,7 +68,7 @@ class CocoKeypoints(data.Dataset):
         if not self.train:
             return tf_image, torch.tensor(image.size), id
 
-        mask_out = dataset_utils.get_mask_out(image, target, self.coco, self.targ_size)
+        # mask_out = dataset_utils.get_mask_out(image, target, self.coco, self.targ_size)
 
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
@@ -84,7 +84,7 @@ class CocoKeypoints(data.Dataset):
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
 
-        return tf_image, pafs, heatmaps, mask_out, keypoints, image, target
+        return tf_image, pafs, heatmaps, keypoints, image, target
 
     def __len__(self) -> int:
         return len(self.ids)
