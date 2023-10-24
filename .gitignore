@@ -2,3 +2,4 @@ onnx/
 __pycache__/
 dokimes.ipynb
 predictions.csv
+runs/

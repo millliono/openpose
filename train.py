@@ -6,22 +6,25 @@ from model import openpose
 from loss import PoseLoss
 from torch.utils.data import DataLoader
 from coco_dataset import CocoKeypoints
+from torch.utils.tensorboard import SummaryWriter
 
 # Hyperparameters etc.
 LEARNING_RATE = 1e-4
-BATCH_SIZE = 1
 WEIGHT_DECAY = 5e-4
+BATCH_SIZE = 1
 EPOCHS = 1
-NUM_WORKERS = 1
+NUM_WORKERS = 4
+COMMENT = "LR_1e-4_BATCH_16"
+LOG_STEP = 100
 PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-def train_fn(train_loader, model, optimizer, loss_fn, device, epoch):
+def train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer):
     loop = tqdm(train_loader, leave=True)
-    mean_loss = []
 
-    for batch_idx, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+    run_loss = 0.0
+    for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
         image = image.to(device)
         targ_pafs = targ_pafs.to(device)
         targ_heatmaps = targ_heatmaps.to(device)
@@ -29,17 +32,18 @@ def train_fn(train_loader, model, optimizer, loss_fn, device, epoch):
         _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
         loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
-        print(f"Batch-({batch_idx}) loss was {loss}")
 
-        mean_loss.append(loss.item())
+        run_loss += loss.item()
+        if i % LOG_STEP == LOG_STEP - 1:
+            writer.add_scalar('train_loss', run_loss / LOG_STEP, epoch * len(train_loader) + i)
+            run_loss = 0.0
+
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-        # update progress bar
-        loop.set_postfix(loss=loss.item())
-
-    print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
+        loop.set_postfix(loss=loss.item())  # update progress bar
+    writer.flush()
 
 
 def collate_fn(batch):
@@ -62,7 +66,6 @@ def main():
     else:
         model = openpose()
     model.train()
-
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     loss_fn = PoseLoss()
@@ -89,8 +92,11 @@ def main():
         drop_last=True,
         collate_fn=collate_fn,
     )
+
+    writer = SummaryWriter(comment=COMMENT)
     for epoch in range(EPOCHS):
-        train_fn(train_loader, model, optimizer, loss_fn, device, epoch)
+        train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer)
+    writer.close()
 
     torch.save(model.state_dict(), "save_model.pth")
     print("Saved openpose to save_model.pth")
