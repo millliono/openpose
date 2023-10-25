@@ -20,9 +20,10 @@ PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-def train_fn(train_loader, test_loader, model, optimizer, loss_fn, device, epoch, writer):
-    loop = tqdm(train_loader, leave=True)
+def train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer):
+    model.train()
 
+    loop = tqdm(train_loader, leave=True)
     run_loss = 0.0
     for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
         image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
@@ -35,27 +36,29 @@ def train_fn(train_loader, test_loader, model, optimizer, loss_fn, device, epoch
 
         run_loss += loss.item()
         if i % LOG_STEP == LOG_STEP - 1:
-            run_vloss = 0.0
-
-            model.eval()
-            for image, targ_pafs, targ_heatmaps in test_loader:
-                image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
-
-                _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
-
-                vloss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
-                run_vloss += vloss.item()
-
-            model.train()
-
             avg_loss = run_loss / LOG_STEP
-            avg_vloss = run_vloss / len(test_loader)
-            writer.add_scalars('Loss', {'train': avg_loss, 'val': avg_vloss}, epoch * len(train_loader) + i)
-
+            writer.add_scalar('train_loss', avg_loss, epoch * len(train_loader) + i)
             run_loss = 0.0
 
         loop.set_postfix(epoch=epoch, loss=loss.item())  # update progress bar
     writer.flush()
+
+
+def test_fn(test_loader, model, loss_fn, device, epoch, writer):
+    model.eval()
+
+    loop = tqdm(test_loader, leave=True)
+    run_vloss = 0.0
+    for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+
+        _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
+
+        vloss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
+        run_vloss += vloss.item()
+
+    avg_vloss = run_vloss / len(test_loader)
+    writer.add_scalar('val_loss', avg_vloss, epoch)
 
 
 def collate_fn(batch):
@@ -129,7 +132,8 @@ def main():
 
     writer = SummaryWriter(comment=COMMENT)
     for epoch in range(EPOCHS):
-        train_fn(train_loader, test_loader, model, optimizer, loss_fn, device, epoch, writer)
+        train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer)
+        test_fn(test_loader, model, loss_fn, device, epoch, writer)
     writer.close()
 
     torch.save(model.state_dict(), "save_model.pth")
