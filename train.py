@@ -59,6 +59,7 @@ def test_fn(test_loader, model, loss_fn, device, epoch, writer):
 
     avg_vloss = run_vloss / len(test_loader)
     writer.add_scalar('val_loss', avg_vloss, epoch)
+    writer.flush()
 
 
 def collate_fn(batch):
