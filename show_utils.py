@@ -41,14 +41,6 @@ def show_heatmaps(heatmaps):
     show_tensors(my_list)
 
 
-def show_heatmaps_combined(heatmaps):
-    """
-    shows image with all heatmaps stacked
-    """
-    htmp = torch.sum(heatmaps, dim=0)
-    show_tensors(htmp)
-
-
 def show_pafs(pafs):
     """
     shows all (32) pafs in single figure (x_ccord, y_coord)
