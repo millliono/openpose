@@ -55,40 +55,43 @@ def person_paf(person, limb, size, visibility):
         dot2 = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size[1], size[0]))
         cond2 = dot2 <= s_thresh
 
-        paf_loc = np.logical_and(cond1, cond2)
+        location = np.logical_and(cond1, cond2)
 
-        return v_norm, paf_loc
+        return v_norm, location
     else:
         return (0, 0), np.full((size[1], size[0]), False)
 
 
 def get_pafs(keypoints, size, visibility):
     pafs = []
+    paf_locs = []
     for limb in common.connect_skeleton:
         res = [person_paf(x, limb, size, visibility) for x in keypoints]
-        vectors, paf_locs = zip(*res)
+        vectors, locations = zip(*res)
 
         listx = []
-        for v, loc in zip(vectors, paf_locs):
+        for v, loc in zip(vectors, locations):
             arrx = np.zeros((size[1], size[0]))
             arrx[loc] = v[0]
             listx.append(arrx)
 
         listy = []
-        for v, loc in zip(vectors, paf_locs):
+        for v, loc in zip(vectors, locations):
             arry = np.zeros((size[1], size[0]))
             arry[loc] = v[1]
             listy.append(arry)
 
-        num = np.add.reduce(paf_locs)
+        num = np.add.reduce(locations)
         num[num == 0] = 1
-        paf_locs = np.maximum.reduce(paf_locs)
+        locations = np.maximum.reduce(locations)
 
         paf_x = np.add.reduce(listx) / num
         paf_y = np.add.reduce(listy) / num
 
-        pafs.append(paf_locs)
-    return pafs
+        pafs.append(paf_x)
+        pafs.append(paf_y)
+        paf_locs.append(locations)
+    return pafs, paf_locs
 
 
 def get_mask_out(image, target, coco, size):

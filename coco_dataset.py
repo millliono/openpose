@@ -78,13 +78,13 @@ class CocoKeypoints(data.Dataset):
         keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
         heatmaps = dataset_utils.get_heatmaps(keypoints, self.targ_size, visibility=[1, 2])
-        pafs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
+        pafs, paf_locs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
 
         # target transforms
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
 
-        return tf_image, pafs, heatmaps, image, target
+        return tf_image, pafs, heatmaps, image, paf_locs, target
 
     def __len__(self) -> int:
         return len(self.ids)
