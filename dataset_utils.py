@@ -9,7 +9,7 @@ def get_heatmaps(keypoints, size, visibility):
     for i in range(18):
         parts.append([x[i] for x in keypoints if x[i][2] in visibility])
 
-    def gaussian(center, sigma=1, size=size):
+    def gaussian(center, sigma=0.7, size=size):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
         dist = np.sqrt((x - center[0])**2 + (y - center[1])**2)
         gaussian = np.exp(-((dist / sigma)**2))
@@ -51,7 +51,7 @@ def person_paf(person, limb, size, visibility):
         dot1 = np.dot(v_norm, vec_xp).reshape(size[1], size[0])
         cond1 = np.logical_and(dot1 >= 0, dot1 <= v_magn)
 
-        s_thresh = 0.7
+        s_thresh = 0.6
         dot2 = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size[1], size[0]))
         cond2 = dot2 <= s_thresh
 
@@ -94,13 +94,13 @@ def get_pafs(keypoints, size, visibility):
     return pafs, paf_locs
 
 
-def get_mask_out(image, target, coco, size):
+def get_mask_out(image_size, target, coco, size):
     masks = [coco.annToMask(x) for x in target if x["num_keypoints"] == 0]
     if masks:
-        mask_out = np.add.reduce(masks)
-        mask_out = np.where(mask_out >= 1, 0, 1)
+        mask_out = np.maximum.reduce(masks)
+        mask_out = 1 - mask_out
     else:
-        mask_out = np.ones((image.size[1], image.size[0]))
+        mask_out = np.ones((image_size[1], image_size[0]))
     mask_out = torch.tensor(mask_out, dtype=torch.float32)
     mask_out = F.resize(mask_out.unsqueeze_(0), size, F.InterpolationMode.NEAREST)
     return mask_out

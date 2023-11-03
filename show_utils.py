@@ -12,12 +12,12 @@ def show_coco(image, target, coco, draw_bbox):
     coco.showAnns(target, draw_bbox)
 
 
-def blend(conf_maps, image):
+def blend(conf_maps, image, rows, cols, figsize):
     conf_maps = [Image.fromarray((x * 255)).convert("L") for x in conf_maps]
     conf_maps = [ImageOps.colorize(x, black="blue", white="orange") for x in conf_maps]
     conf_maps = [x.resize(image.size, resample=Image.NEAREST) for x in conf_maps]
     blended = [Image.blend(x, image, 0.4) for x in conf_maps]
-    plot_grid(blended, rows=7, cols=3, figsize=(15, 30))
+    plot_grid(blended, rows, cols, figsize)
 
 
 def plot_grid(images, rows, cols, figsize):
