@@ -50,7 +50,7 @@ class CocoKeypoints(data.Dataset):
         visible = np.where(visibility > 0, 1, 0)
 
         coords = keypoints[:, :, :2].reshape(-1, 17, 2)
-        resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5])
+        resized = np.round((coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5]))
 
         resized = resized * visible
         res = np.concatenate((resized, visibility), axis=2)
@@ -84,9 +84,7 @@ class CocoKeypoints(data.Dataset):
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
 
-        return tf_image, pafs, heatmaps, keypoints, image, target
+        return tf_image, pafs, heatmaps, image, target
 
     def __len__(self) -> int:
         return len(self.ids)
-
-

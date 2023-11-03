@@ -2,120 +2,45 @@ import torch
 import matplotlib.pyplot as plt
 import torchvision.transforms.functional as F
 import numpy as np
-from PIL import ImageDraw
+from PIL import ImageDraw, Image, ImageOps
 import common
 
 
 def show_coco(image, target, coco, draw_bbox):
     plt.axis("off")
     plt.imshow(np.asarray(image))
-    # Plot segmentation and bounding box.
     coco.showAnns(target, draw_bbox)
 
 
-def show_tensors(imgs):
-    """
-    shows a list of tensor images using subplots
-    """
-    if not isinstance(imgs, list):
-        imgs = [imgs]
-    if len(imgs) > 1:
-        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(30, 9))
-    else:
-        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(4, 4))
-    for i, img in enumerate(imgs):
-        img = img.detach()
-        img = img.numpy()
-        axs[0, i].imshow(img)
-        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+def blend(conf_maps, image):
+    conf_maps = [Image.fromarray((x * 255)).convert("L") for x in conf_maps]
+    conf_maps = [ImageOps.colorize(x, black="blue", white="orange") for x in conf_maps]
+    conf_maps = [x.resize(image.size, resample=Image.NEAREST) for x in conf_maps]
+    blended = [Image.blend(x, image, 0.4) for x in conf_maps]
+    plot_grid(blended, rows=7, cols=3, figsize=(15, 30))
 
 
-def show_heatmaps(heatmaps):
-    """
-    shows all (17) heatmap points using subplots
-    """
-    my_list = []
-    for x in heatmaps:
-        my_list.append(x)
-
-    show_tensors(my_list)
-
-
-def show_pafs(pafs):
-    """
-    shows all (32) pafs in single figure (x_ccord, y_coord)
-    using subplots
-    """
-    my_list = []
-    for x in pafs:
-        my_list.append(x)
-    show_tensors(my_list)
-
-
-def show_pafs_quiver(pafs, keypoints, size):
-    """
-    shows all (16) pafs as vector fields using subplots
-    """
-    num_images = pafs.size(dim=0) / 2
-    num_cols = 4
-    num_rows = (num_images - 1) // num_cols + 1
-
-    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(15, 12))
-
-    if num_rows == 1:
-        axes = axes.reshape(1, -1)
-    elif num_cols == 1:
-        axes = axes.reshape(-1, 1)
-
-
-    for i in range(len(pafs) // 2):
-        partA_id = common.connect_skeleton[i][0]
-        partB_id = common.connect_skeleton[i][1]
-
-        partsA = [x[partA_id] for x in keypoints]
-        partsB = [x[partB_id] for x in keypoints]
-
-        pafx = pafs[2 * i]
-        pafy = pafs[2 * i + 1]
-
-        px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
-        row_idx = i // num_cols
-        col_idx = i % num_cols
-        axes[row_idx, col_idx].quiver(
-            px,
-            py,
-            pafx,
-            pafy,
-            scale=1,
-            scale_units="xy",
-            angles="xy",
-            pivot="tail",
-        )
-
-        axes[row_idx, col_idx].scatter([x[0] for x in partsA], [x[1] for x in partsA], color='r', s=3)
-        axes[row_idx, col_idx].scatter([x[0] for x in partsB], [x[1] for x in partsB], color='b', s=3)
-        # axes[row_idx, col_idx].scatter(-0, -0, color='r', s=5)
-        axes[row_idx, col_idx].invert_yaxis()
-
+def plot_grid(images, rows, cols, figsize):
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    for i, ax in enumerate(axes.flat):
+        if i < len(images):
+            ax.imshow(images[i])
+            ax.axis('off')
+        else:
+            ax.axis('off')
     plt.tight_layout()
+    plt.show()
 
+def surface(image):
+    x_dim = np.arange(0, image.shape[1], 1)
+    y_dim = np.arange(0, image.shape[0], 1)
+    X, Y = np.meshgrid(x_dim, y_dim)
+    Z = image.flatten()
 
-def show_pafs_quiver_combined(pafs, size):
-    paf_x = []
-    for i in range(0, pafs.size(dim=0), 2):
-        paf_x.append(pafs[i])
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
 
-    paf_y = []
-    for i in range(1, pafs.size(dim=0), 2):
-        paf_y.append(pafs[i])
-
-    paf_x = torch.sum(torch.stack(paf_x), dim=0)
-    paf_y = torch.sum(torch.stack(paf_y), dim=0)
-
-    px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
-    plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail")
-    plt.gca().invert_yaxis()
-
+    ax.plot_surface(X, Y, Z.reshape(image.shape), cmap="viridis")
 
 @torch.no_grad()
 def draw_keypoints(
@@ -158,15 +83,63 @@ def draw_keypoints(
     plt.imshow(img)
 
 
-def surf_heatmap(heatmap):
-    x_dim = np.arange(0, heatmap.shape[1], 1)
-    y_dim = np.arange(0, heatmap.shape[0], 1)
-    X, Y = np.meshgrid(x_dim, y_dim)
-    Z = heatmap.flatten()
+def show_pafs_quiver(pafs, keypoints, size):
+    """
+    shows all (16) pafs as vector fields using subplots
+    """
+    num_images = pafs.size(dim=0) / 2
+    num_cols = 4
+    num_rows = (num_images - 1) // num_cols + 1
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
+    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(15, 12))
 
-    ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
+    if num_rows == 1:
+        axes = axes.reshape(1, -1)
+    elif num_cols == 1:
+        axes = axes.reshape(-1, 1)
 
-    ax.set_title("surf plot")
+    for i in range(len(pafs) // 2):
+        partA_id = common.connect_skeleton[i][0]
+        partB_id = common.connect_skeleton[i][1]
+
+        partsA = [x[partA_id] for x in keypoints]
+        partsB = [x[partB_id] for x in keypoints]
+
+        pafx = pafs[2 * i]
+        pafy = pafs[2 * i + 1]
+
+        px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
+        row_idx = i // num_cols
+        col_idx = i % num_cols
+        axes[row_idx, col_idx].quiver(
+            px,
+            py,
+            pafx,
+            pafy,
+            scale=1,
+            scale_units="xy",
+            angles="xy",
+            pivot="tail",
+        )
+
+        axes[row_idx, col_idx].scatter([x[0] for x in partsA], [x[1] for x in partsA], color='r', s=3)
+        axes[row_idx, col_idx].scatter([x[0] for x in partsB], [x[1] for x in partsB], color='b', s=3)
+        axes[row_idx, col_idx].invert_yaxis()
+    plt.tight_layout()
+
+
+def show_pafs_quiver_combined(pafs, size):
+    paf_x = []
+    for i in range(0, pafs.size(dim=0), 2):
+        paf_x.append(pafs[i])
+
+    paf_y = []
+    for i in range(1, pafs.size(dim=0), 2):
+        paf_y.append(pafs[i])
+
+    paf_x = torch.sum(torch.stack(paf_x), dim=0)
+    paf_y = torch.sum(torch.stack(paf_y), dim=0)
+
+    px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
+    plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail")
+    plt.gca().invert_yaxis()
