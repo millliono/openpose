@@ -1,5 +1,6 @@
 import torch
 import torchvision.transforms.v2.functional as F
+from torchvision.transforms import v2
 import numpy as np
 
 
@@ -16,7 +17,8 @@ class Resize():
         assert isinstance(output_size, (int, tuple))
         self.output_size = output_size
 
-    def __call__(self, image, keypoints):
+    def __call__(self, sample):
+        image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
         w, h = image.size
 
         if isinstance(self.output_size, int):
@@ -32,28 +34,27 @@ class Resize():
         image = F.resize(image, (new_h, new_w))
 
         keypoints = ((keypoints + [0.5, 0.5]) * [new_w / w, new_h / h]) - [0.5, 0.5]
-        return image, keypoints
+        return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
 
 
 class RandomCrop():
     """Crop randomly the image in a sample.
 
     Args:
-        output_size (tuple or int): Desired output size. If int, square crop
-            is made.
+        crop_factor (tuple or int): Larger edge crop factor. Smaller edge stayes uncropped.
     """
 
-    def __init__(self, output_size):
-        assert isinstance(output_size, (int, tuple))
-        if isinstance(output_size, int):
-            self.output_size = (output_size, output_size)
-        else:
-            assert len(output_size) == 2
-            self.output_size = output_size
+    def __init__(self, crop_factor):
+        self.crop_factor = crop_factor
 
-    def __call__(self, image, keypoints):
+    def __call__(self, sample):
+        image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
         w, h = image.size
-        new_w, new_h = self.output_size
+
+        if h > w:
+            new_w, new_h = w, self.crop_factor * h
+        else:
+            new_w, new_h = self.crop_factor * w, h
 
         top = np.random.randint(0, h - new_h + 1)
         left = np.random.randint(0, w - new_w + 1)
@@ -62,16 +63,20 @@ class RandomCrop():
 
         keypoints = keypoints - [left, top]
 
-        # !!!!what happens to keypoints outside crop!!!!
+        # deactivate cropped keypoints
+        for i in range(len(keypoints)):
+            for j in range(len(keypoints[i])):
+                if (0 > keypoints[i][j][0] > new_w) or (0 > keypoints[i][j][0] > new_h):  # check > or >=
+                    vis[i][j] = 0
 
-        return image, keypoints
+        return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
 
 
 class Pad():
     """Pad the image in a sample to a given size.
 
     Args:
-        output_size (tuple or int): Desired output size. If int, square crop
+        output_size (tuple or int): Desired output size. If int, square image
             is made.
     """
 
@@ -83,7 +88,8 @@ class Pad():
             assert len(output_size) == 2
             self.output_size = output_size
 
-    def __call__(self, image, keypoints):
+    def __call__(self, sample):
+        image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
         w, h = image.size
         new_w, new_h = self.output_size
 
@@ -99,16 +105,9 @@ class Pad():
 
         keypoints = keypoints + [left, top]
 
-        return image, keypoints
+        return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
 
 
-class ToTensor():
-
-    def __call__(self, sample):
-        image, landmarks = sample['image'], sample['landmarks']
-
-        # swap color axis because
-        # numpy image: H x W x C
-        # torch image: C x H x W
-        image = image.transpose((2, 0, 1))
-        return {'image': torch.from_numpy(image), 'landmarks': torch.from_numpy(landmarks)}
+def resize_keypoints(kpt_coords, stride=8):
+    resized = ((kpt_coords + [0.5, 0.5]) / stride) - [0.5, 0.5]
+    return resized

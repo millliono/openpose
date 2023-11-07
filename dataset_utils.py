@@ -111,7 +111,7 @@ def add_neck(keypoints, visibility):
         l_should = np.asarray(keypoints[i][5])
         r_should = np.asarray(keypoints[i][6])
 
-        neck = np.round((l_should + r_should) / 2)
+        neck = (l_should + r_should) / 2
 
         if l_should[2] in visibility and r_should[2] in visibility:
             neck[2] = 2

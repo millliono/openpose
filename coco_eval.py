@@ -16,7 +16,7 @@ targ_size = (46, 46)
 coco_dataset = coco_dataset.CocoKeypoints(
     root=str(pathlib.Path("../coco") / "images" / "val2017"),
     annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-    input_transform=transforms.Compose([
+    transform=transforms.Compose([
         # transforms.Resize(inp_size),
         transforms.ToTensor(),
         transforms.ConvertImageDtype(torch.float32),
