@@ -1,6 +1,5 @@
 import torch
 import matplotlib.pyplot as plt
-import torchvision.transforms.functional as F
 import numpy as np
 from PIL import ImageDraw, Image, ImageOps
 import common

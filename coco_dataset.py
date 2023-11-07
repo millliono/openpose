@@ -1,13 +1,13 @@
 import os.path
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Tuple
 from PIL import Image
 import numpy as np
 from collections import defaultdict
-import dataset_utils
 import torch.utils.data as data
 import torch
-import transforms
 from torchvision.transforms import v2
+import dataset_utils
+import transforms
 
 
 class CocoKeypoints(data.Dataset):
@@ -67,7 +67,11 @@ class CocoKeypoints(data.Dataset):
         pafs, paf_locs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
 
         # totensor
-        tf_image = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float, scale=True)])(tf_image)
+        tf_image = v2.Compose([
+            v2.ToImage(),
+            v2.ToDtype(torch.float, scale=True),
+            # v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+        ])(tf_image)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float)
 

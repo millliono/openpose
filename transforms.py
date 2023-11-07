@@ -1,6 +1,4 @@
-import torch
 import torchvision.transforms.v2.functional as F
-from torchvision.transforms import v2
 import numpy as np
 
 
