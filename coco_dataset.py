@@ -66,7 +66,7 @@ class CocoKeypoints(data.Dataset):
         heatmaps = dataset_utils.get_heatmaps(keypoints, self.targ_size, visibility=[1, 2])
         pafs, paf_locs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
 
-        # target transforms
+        # totensor
         tf_image = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float, scale=True)])(tf_image)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float)
