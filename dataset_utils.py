@@ -11,9 +11,12 @@ def get_heatmaps(keypoints, size, visibility):
 
     def gaussian(center, sigma=1, size=size):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
-        dist = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-        gaussian = np.exp(-((dist / sigma)**2))
-        return gaussian
+        dist = (x - center[0])**2 + (y - center[1])**2
+        exponent = dist / (2.0 * sigma * sigma)
+        mask = exponent <= 2.5 # 4.6052
+        gauss = np.exp(-exponent)
+        gauss = mask * gauss
+        return gauss
 
     heatmaps = []
     for x in parts:

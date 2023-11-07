@@ -71,7 +71,6 @@ def get_limb_scores(pafs, bodyparts, image_size):
                     penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
                     penalized_score = scores.mean() + penalty
 
-                    # here 0.8 is too stringent
                     criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
                     criterion2 = penalized_score > 0
 
