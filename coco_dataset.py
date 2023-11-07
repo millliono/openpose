@@ -70,7 +70,7 @@ class CocoKeypoints(data.Dataset):
         tf_image = v2.Compose([
             v2.ToImage(),
             v2.ToDtype(torch.float, scale=True),
-            # v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+            v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])(tf_image)
         heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float)
         pafs = torch.tensor(np.array(pafs), dtype=torch.float)

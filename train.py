@@ -1,11 +1,12 @@
 import torch
 from tqdm import tqdm
 import pathlib
-from torchvision import transforms
 from model import openpose
 from loss import PoseLoss
 from torch.utils.data import DataLoader
 from coco_dataset import CocoKeypoints
+from torchvision.transforms import v2
+import transforms as mytf
 from torch.utils.tensorboard import SummaryWriter
 
 # Hyperparameters etc.
@@ -92,23 +93,15 @@ def main():
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
-        transform=transforms.Compose([
-            transforms.Resize(inp_size),
-            transforms.ToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]),
+        transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(368),
+                              mytf.Pad(368)]),
         targ_size=targ_size)
 
     test_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "val2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-        transform=transforms.Compose([
-            transforms.Resize(inp_size),
-            transforms.ToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]),
+        transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(368),
+                              mytf.Pad(368)]),
         targ_size=targ_size)
 
     train_loader = DataLoader(
