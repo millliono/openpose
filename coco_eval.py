@@ -1,6 +1,5 @@
 import coco_dataset
 import pathlib
-from torchvision import transforms
 import torch
 import model
 import post
@@ -10,27 +9,24 @@ from tqdm import tqdm
 import json
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from torchvision.transforms import v2
+import transforms as mytf
 
 inp_size = (368, 368)
 targ_size = (46, 46)
 coco_dataset = coco_dataset.CocoKeypoints(
     root=str(pathlib.Path("../coco") / "images" / "val2017"),
     annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-    transform=transforms.Compose([
-        # transforms.Resize(inp_size),
-        transforms.ToTensor(),
-        transforms.ConvertImageDtype(torch.float32),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ]),
+    transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(368), mytf.Pad(368)]),
     targ_size=targ_size,
-    train=False)
+    test=True)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 device = "cpu"  # comment when using modern gpu
 if device == "cuda":
     device = "cuda:0"
     model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
-    model.load_state_dict(torch.load("save_modelGG.pth"))
+    model.load_state_dict(torch.load("save_model_MYTF.pth"))
 else:
     model = model.openpose()
 model.eval()
@@ -54,14 +50,13 @@ with torch.no_grad():
             kpt_groups = post.post_process(htmp, paf, og_size.tolist())
             if kpt_groups:
                 keypoints = post.coco_format(kpt_groups)
-                
+
                 # delete neck keypoint
                 for i in range(len(keypoints)):
                     keypoints[i].pop()
-                    
+
                 keypoints = np.array(keypoints).reshape(-1, 51)
                 keypoints = keypoints.tolist()
-                
 
                 for x in keypoints:
                     person = {

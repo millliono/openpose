@@ -12,7 +12,7 @@ import transforms
 
 class CocoKeypoints(data.Dataset):
 
-    def __init__(self, root, annFile, transform, targ_size):
+    def __init__(self, root, annFile, transform, targ_size, test=False):
         from pycocotools.coco import COCO
 
         self.root = root
@@ -20,6 +20,7 @@ class CocoKeypoints(data.Dataset):
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
         self.transform = transform
         self.targ_size = targ_size
+        self.test = test
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -48,6 +49,14 @@ class CocoKeypoints(data.Dataset):
 
         image = self._load_image(id)
         target = self._load_target(id)
+
+        if self.test:
+            input = v2.Compose([
+                v2.ToImage(),
+                v2.ToDtype(torch.float, scale=True),
+                v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+            ])(image)
+            return input, torch.tensor(image.size), id
 
         # mask_out = dataset_utils.get_mask_out(image.size, target, self.coco, self.targ_size)
         targ = self.list_of_dicts_to_dict_of_lists(target)
