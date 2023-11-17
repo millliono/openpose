@@ -15,7 +15,7 @@ def blend(conf_maps, image, rows, cols, figsize):
     conf_maps = [Image.fromarray((x * 255)).convert("L") for x in conf_maps]
     conf_maps = [ImageOps.colorize(x, black="blue", white="orange") for x in conf_maps]
     conf_maps = [x.resize(image.size, resample=Image.NEAREST) for x in conf_maps]
-    blended = [Image.blend(x, image, 0.4) for x in conf_maps]
+    blended = [Image.blend(x, image, 0.5) for x in conf_maps]
     plot_grid(blended, rows, cols, figsize)
 
 
@@ -30,6 +30,7 @@ def plot_grid(images, rows, cols, figsize):
     plt.tight_layout()
     plt.show()
 
+
 def surface(image):
     x_dim = np.arange(0, image.shape[1], 1)
     y_dim = np.arange(0, image.shape[0], 1)
@@ -40,6 +41,7 @@ def surface(image):
     ax = fig.add_subplot(111, projection="3d")
 
     ax.plot_surface(X, Y, Z.reshape(image.shape), cmap="viridis")
+
 
 @torch.no_grad()
 def draw_keypoints(
@@ -82,11 +84,8 @@ def draw_keypoints(
     plt.imshow(img)
 
 
-def show_pafs_quiver(pafs, keypoints, size):
-    """
-    shows all (16) pafs as vector fields using subplots
-    """
-    num_images = pafs.size(dim=0) / 2
+def show_pafs_quiver(pafs, size):
+    num_images = len(pafs) // 2
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
@@ -98,12 +97,6 @@ def show_pafs_quiver(pafs, keypoints, size):
         axes = axes.reshape(-1, 1)
 
     for i in range(len(pafs) // 2):
-        partA_id = common.connect_skeleton[i][0]
-        partB_id = common.connect_skeleton[i][1]
-
-        partsA = [x[partA_id] for x in keypoints]
-        partsB = [x[partB_id] for x in keypoints]
-
         pafx = pafs[2 * i]
         pafy = pafs[2 * i + 1]
 
@@ -120,24 +113,16 @@ def show_pafs_quiver(pafs, keypoints, size):
             angles="xy",
             pivot="tail",
         )
-
-        axes[row_idx, col_idx].scatter([x[0] for x in partsA], [x[1] for x in partsA], color='r', s=3)
-        axes[row_idx, col_idx].scatter([x[0] for x in partsB], [x[1] for x in partsB], color='b', s=3)
         axes[row_idx, col_idx].invert_yaxis()
     plt.tight_layout()
 
 
 def show_pafs_quiver_combined(pafs, size):
-    paf_x = []
-    for i in range(0, pafs.size(dim=0), 2):
-        paf_x.append(pafs[i])
+    paf_x = pafs[[x for x in range(len(pafs)) if x%2==0]]
+    paf_y = pafs[[x for x in range(len(pafs)) if x%2==1]]
 
-    paf_y = []
-    for i in range(1, pafs.size(dim=0), 2):
-        paf_y.append(pafs[i])
-
-    paf_x = torch.sum(torch.stack(paf_x), dim=0)
-    paf_y = torch.sum(torch.stack(paf_y), dim=0)
+    paf_x = np.sum(paf_x, axis=0)
+    paf_y = np.sum(paf_y, axis=0)
 
     px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
     plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail")
