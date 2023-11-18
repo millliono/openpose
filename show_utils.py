@@ -84,12 +84,12 @@ def draw_keypoints(
     plt.imshow(img)
 
 
-def show_pafs_quiver(pafs, size):
+def pafs_quiver(pafs, size):
     num_images = len(pafs) // 2
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
-    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(15, 12))
+    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(18, 18))
 
     if num_rows == 1:
         axes = axes.reshape(1, -1)
@@ -117,9 +117,9 @@ def show_pafs_quiver(pafs, size):
     plt.tight_layout()
 
 
-def show_pafs_quiver_combined(pafs, size):
-    paf_x = pafs[[x for x in range(len(pafs)) if x%2==0]]
-    paf_y = pafs[[x for x in range(len(pafs)) if x%2==1]]
+def pafs_quiver_combined(pafs, size):
+    paf_x = pafs[[x for x in range(len(pafs)) if x % 2 == 0]]
+    paf_y = pafs[[x for x in range(len(pafs)) if x % 2 == 1]]
 
     paf_x = np.sum(paf_x, axis=0)
     paf_y = np.sum(paf_y, axis=0)
