@@ -4,6 +4,7 @@ from torchvision.models import vgg19_bn, VGG19_BN_Weights
 
 vgg19 = vgg19_bn(weights=VGG19_BN_Weights.DEFAULT)
 
+
 class backbone(nn.Module):
 
     def __init__(self):
@@ -12,10 +13,10 @@ class backbone(nn.Module):
         self.remaining = nn.Sequential(
             nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.PReLU(),
+            nn.PReLU(num_parameters=256),
             nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.PReLU(),
+            nn.PReLU(num_parameters=128),
         )
 
     def forward(self, x):
@@ -34,7 +35,7 @@ class conv_block(nn.Module):
         self.use_relu = use_relu
 
         if self.use_relu:
-            self.relu = nn.PReLU()
+            self.relu = nn.PReLU(num_parameters=out_channels)
 
     def forward(self, x):
         x = self.batchnorm(self.conv(x))
