@@ -61,6 +61,7 @@ def test_fn(test_loader, model, loss_fn, device, epoch, writer):
     avg_vloss = run_vloss / len(test_loader)
     writer.add_scalar('val_loss', avg_vloss, epoch)
     writer.flush()
+    return avg_vloss
 
 
 def collate_fn(batch):
@@ -125,13 +126,17 @@ def main():
     )
 
     writer = SummaryWriter(comment=COMMENT)
+    best_val_loss = float('inf')
+
     for epoch in range(EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer)
-        test_fn(test_loader, model, loss_fn, device, epoch, writer)
-    writer.close()
+        avg_vloss = test_fn(test_loader, model, loss_fn, device, epoch, writer)
 
-    torch.save(model.state_dict(), "save_model.pth")
-    print("Saved openpose to save_model.pth")
+        if avg_vloss < best_val_loss:
+            best_val_loss = avg_vloss
+            torch.save(model.state_dict(), "save_model.pth")
+            print(f"best model at epoch: {epoch}")
+    writer.close()
 
 
 if __name__ == "__main__":
