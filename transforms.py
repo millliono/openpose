@@ -64,7 +64,7 @@ class RandomCrop():
         # deactivate cropped keypoints
         for i in range(len(keypoints)):
             for j in range(len(keypoints[i])):
-                if (0 > keypoints[i][j][0] > new_w) or (0 > keypoints[i][j][0] > new_h):  # check > or >=
+                if not (0 <= keypoints[i][j][0] <= new_w and 0 <= keypoints[i][j][1] <= new_h):
                     vis[i][j] = 0
 
         return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
@@ -104,6 +104,36 @@ class Pad():
         keypoints = keypoints + [left, top]
 
         return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
+
+
+class RandomRotation():
+    """Rotate the image in a sample by a random angle.
+
+    Args:
+        degrees (sequence or float or int): Range of degrees to select from.
+            If degrees is a number, the range of degrees will be (-degrees, degrees).
+    """
+
+    def __init__(self, degrees):
+        self.degrees = degrees
+
+    def __call__(self, sample):
+        image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
+
+        theta = np.random.randint(-self.degrees, self.degrees + 1)
+
+        image = F.rotate(image, theta)
+
+        center = (image.width / 2, image.height / 2)
+        theta = np.radians(-theta)
+        rot_mat = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+
+        for i in range(len(keypoints)):
+            keypoints[i] = (keypoints[i] + [0.5, 0.5]) - center
+            keypoints[i] = (rot_mat @ keypoints[i].T).T
+            keypoints[i] = keypoints[i] + center - [0.5, 0.5]
+
+        return {'image': image, 'kpt_coords': keypoints, 'kpt_vis': vis}
 
 
 def resize_keypoints(kpt_coords, stride=8):

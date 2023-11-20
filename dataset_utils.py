@@ -13,7 +13,7 @@ def get_heatmaps(keypoints, size, visibility):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
         dist = (x - center[0])**2 + (y - center[1])**2
         exponent = dist / (2.0 * sigma * sigma)
-        mask = exponent <= 2.5  # 4.6052
+        mask = exponent <= 2.3  
         gauss = np.exp(-exponent)
         gauss = mask * gauss
         return gauss
@@ -50,7 +50,7 @@ def person_paf(person, limb, size, visibility):
         vec_xp = np.array([xp_x, xp_y])
 
         dot1 = np.dot(v_norm, vec_xp).reshape(size[1], size[0])
-        cond1 = np.logical_and(dot1 >= 0, dot1 <= v_magn)
+        cond1 = np.logical_and(dot1 >= -(0.2*v_magn), dot1 <= 1.2*v_magn)
 
         s_thresh = 1
         dot2 = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size[1], size[0]))
