@@ -13,10 +13,10 @@ from torch.utils.tensorboard import SummaryWriter
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 1
-EPOCHS = 1
-NUM_WORKERS = 6
-COMMENT = "LR_1e-4_BATCH_16"
-LOG_STEP = 10
+EPOCHS = 60
+NUM_WORKERS = 10
+COMMENT = ""
+LOG_STEP = 1000
 PIN_MEMORY = True
 LOAD_MODEL = False
 
@@ -50,13 +50,14 @@ def test_fn(test_loader, model, loss_fn, device, epoch, writer):
 
     loop = tqdm(test_loader, leave=True)
     run_vloss = 0.0
-    for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+    with torch.no_grad:
+        for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+            image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
-        _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
+            _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
-        vloss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
-        run_vloss += vloss.item()
+            vloss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
+            run_vloss += vloss.item()
 
     avg_vloss = run_vloss / len(test_loader)
     writer.add_scalar('val_loss', avg_vloss, epoch)
@@ -73,7 +74,7 @@ def collate_fn(batch):
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = "cpu"  # comment if using modern gpu
+    # device = "cpu"  # comment if using modern gpu
 
     if device == "cuda":
         model = torch.nn.DataParallel(openpose()).cuda()
@@ -94,8 +95,10 @@ def main():
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
-        transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(368),
-                              mytf.Pad(368)]),
+        transform=v2.Compose([mytf.RandomCrop(0.8),
+                              mytf.Resize(368),
+                              mytf.Pad(368),
+                              mytf.RandomRotation(40)]),
         targ_size=targ_size)
 
     test_dataset = CocoKeypoints(
