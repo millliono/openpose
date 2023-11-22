@@ -22,7 +22,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
     test=True)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"  # comment when using modern gpu
+# device = "cpu"  # comment when using modern gpu
 if device == "cuda":
     device = "cuda:0"
     model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
