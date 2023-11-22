@@ -50,7 +50,7 @@ def test_fn(test_loader, model, loss_fn, device, epoch, writer):
 
     loop = tqdm(test_loader, leave=True)
     run_vloss = 0.0
-    with torch.no_grad:
+    with torch.no_grad():
         for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
             image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
