@@ -39,7 +39,7 @@ def person_paf(person, limb, size, visibility):
         part2 = np.array([person[limb[1]][0], person[limb[1]][1]])
 
         v = part2 - part1
-        v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-8
+        v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-5
         v_norm = v / v_magn
         v_norm_orth = np.array([v_norm[1], -v_norm[0]])
 
