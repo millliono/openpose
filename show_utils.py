@@ -50,21 +50,15 @@ def draw_keypoints(
     connectivity,
     keypoint_color="blue",
     line_color="yellow",
-    radius: int = 2,
+    radius: int = 1.5,
     width: int = 2,
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
 
     for x in keypoints:
-        for y in x:
-            if y[2] != 0:
-                x1 = y[0] - radius
-                x2 = y[0] + radius
-                y1 = y[1] - radius
-                y2 = y[1] + radius
-                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
 
+        # draw limbs
         if connectivity:
             for connection in connectivity:
                 if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
@@ -79,6 +73,14 @@ def draw_keypoints(
                         width=width,
                         fill=line_color,
                     )
+        # draw keypoints
+        for y in x:
+            if y[2] != 0:
+                x1 = y[0] - radius
+                x2 = y[0] + radius
+                y1 = y[1] - radius
+                y2 = y[1] + radius
+                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
 
     img = np.array(img_to_draw)
     plt.imshow(img)

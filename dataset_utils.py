@@ -6,7 +6,7 @@ import torchvision.transforms.functional as F
 
 def get_heatmaps(keypoints, size, visibility):
     parts = []
-    for i in range(18):
+    for i in range(len(common.coco_keypoints)):
         parts.append([x[i] for x in keypoints if x[i][2] in visibility])
 
     def gaussian(center, sigma=1, size=size):

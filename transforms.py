@@ -1,5 +1,7 @@
 import torchvision.transforms.v2.functional as F
+from torchvision.transforms import v2
 import numpy as np
+import torch
 
 
 class Resize():
@@ -134,6 +136,24 @@ class RandomRotation():
             keypoints[i] = keypoints[i] + center - [0.5, 0.5]
 
         return {'image': image, 'kpt_coords': keypoints, 'kpt_vis': vis}
+
+
+class ToTensor(object):
+    """Convert to Tensors."""
+
+    def __call__(self, sample):
+        return {
+            'image':
+                v2.Compose([
+                    v2.ToImage(),
+                    v2.ToDtype(torch.float, scale=True),
+                    # v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                ])(sample['image']),
+            'pafs':
+                torch.tensor(np.array(sample['pafs']), dtype=torch.float),
+            'heatmaps':
+                torch.tensor(np.array(sample['heatmaps']), dtype=torch.float)
+        }
 
 
 def resize_keypoints(kpt_coords, stride=8):
