@@ -2,7 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import ImageDraw, Image, ImageOps
-import common
+import random
 
 
 def show_coco(image, target, coco, draw_bbox):
@@ -44,35 +44,34 @@ def surface(image):
 
 
 @torch.no_grad()
-def draw_keypoints(
+def draw_skeleton(
     image,
-    keypoints,
+    humans,
     connectivity,
-    keypoint_color="blue",
-    line_color="yellow",
     radius: int = 1.5,
     width: int = 2,
 ):
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
 
-    for x in keypoints:
+    for x in humans:
 
         # draw limbs
-        if connectivity:
-            for connection in connectivity:
-                if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
-                    start_pt_x = x[connection[0]][0]
-                    start_pt_y = x[connection[0]][1]
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-                    end_pt_x = x[connection[1]][0]
-                    end_pt_y = x[connection[1]][1]
+        for connection in connectivity:
+            if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
+                start_pt_x = x[connection[0]][0]
+                start_pt_y = x[connection[0]][1]
 
-                    draw.line(
-                        ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
-                        width=width,
-                        fill=line_color,
-                    )
+                end_pt_x = x[connection[1]][0]
+                end_pt_y = x[connection[1]][1]
+
+                draw.line(
+                    ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
+                    width=width,
+                    fill=color,
+                )
         # draw keypoints
         for y in x:
             if y[2] != 0:
@@ -80,7 +79,12 @@ def draw_keypoints(
                 x2 = y[0] + radius
                 y1 = y[1] - radius
                 y2 = y[1] + radius
-                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
+                draw.ellipse(
+                    [x1, y1, x2, y2],
+                    outline=None,
+                    width=0,
+                    fill="orange",
+                )
 
     img = np.array(img_to_draw)
     plt.imshow(img)

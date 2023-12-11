@@ -23,11 +23,11 @@ for i in tqdm(range(len(coco_dataset.ids))):
     if not humans:
         continue
     
-    forcoco = post.coco_format(humans)
-    forcoco = np.array(forcoco).reshape(-1, 51)
-    forcoco = forcoco.tolist()
+    coco_humans = post.coco_format(humans)
+    coco_humans = np.array(coco_humans).reshape(-1, 51)
+    coco_humans = coco_humans.tolist()
 
-    for x in forcoco:
+    for x in coco_humans:
         person = {
             "image_id": id,
             "category_id": 1,

@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 
 # Hyperparameters etc.
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 1
 EPOCHS = 60
