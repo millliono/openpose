@@ -46,7 +46,7 @@ def surface(image):
 @torch.no_grad()
 def draw_skeleton(
     image,
-    humans,
+    coco_humans,
     connectivity,
     radius: int = 1.5,
     width: int = 2,
@@ -54,7 +54,8 @@ def draw_skeleton(
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
 
-    for x in humans:
+    coco_humans = np.array(coco_humans).reshape(-1, 17, 3)
+    for x in coco_humans:
 
         # draw limbs
         color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))

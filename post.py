@@ -171,13 +171,14 @@ def post_process(heatmaps, pafs, image_size):
 
 
 def coco_format(humans):
-    coco = []
+    coco_humans = []
     for x in humans:
         kpts = [[0, 0, 0]] * 17
         for y in x:
             kpts[y["part_type"]] = y["coords"].tolist() + [1]
-        coco.append(kpts)
-    return coco
+        coco_humans.append(kpts)
+    coco_humans = np.array(coco_humans).reshape(-1, 51).tolist()
+    return coco_humans
 
 
 def supress_low_conf_people(groups):

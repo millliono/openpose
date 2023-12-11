@@ -24,9 +24,6 @@ for i in tqdm(range(len(coco_dataset.ids))):
         continue
     
     coco_humans = post.coco_format(humans)
-    coco_humans = np.array(coco_humans).reshape(-1, 51)
-    coco_humans = coco_humans.tolist()
-
     for x in coco_humans:
         person = {
             "image_id": id,
