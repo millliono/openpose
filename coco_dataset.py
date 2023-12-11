@@ -12,14 +12,13 @@ import transforms
 
 class CocoKeypoints(data.Dataset):
 
-    def __init__(self, root, annFile, transform, test=False):
+    def __init__(self, root, annFile, transform):
         from pycocotools.coco import COCO
 
         self.root = root
         self.coco = COCO(annFile)
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
         self.transform = transform
-        self.test = test
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -50,14 +49,6 @@ class CocoKeypoints(data.Dataset):
         target = self._load_target(id)
         anns = (image.copy(), target)
 
-        if self.test:
-            input = v2.Compose([
-                v2.ToImage(),
-                v2.ToDtype(torch.float, scale=True),
-                v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-            ])(image)
-            return input, torch.tensor(image.size), id
-
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
@@ -70,13 +61,13 @@ class CocoKeypoints(data.Dataset):
 
         keypoints = np.concatenate((transforms.resize_keypoints(coords, stride=8), vis), axis=2)
 
-        targ_size = np.array(image.size)//8
+        targ_size = np.array(image.size) // 8
         heatmaps = dataset_utils.get_heatmaps(keypoints, targ_size, visibility=[1, 2])
         pafs, paf_locs = dataset_utils.get_pafs(keypoints, targ_size, visibility=[1, 2])
 
         ts = transforms.ToTensor()({'image': image, 'pafs': pafs, 'heatmaps': heatmaps})
 
-        return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns 
+        return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns, id
 
     def __len__(self) -> int:
         return len(self.ids)

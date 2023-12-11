@@ -174,7 +174,7 @@ def post_process(heatmaps, pafs, image_size):
 def coco_format(humans):
     coco = []
     for x in humans:
-        kpts = [[0, 0, 0]] * 18
+        kpts = [[0, 0, 0]] * 17
         for y in x:
             kpts[y["part_id"]] = y["coords"].tolist() + [1]
         coco.append(kpts)

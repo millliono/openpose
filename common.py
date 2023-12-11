@@ -22,8 +22,8 @@ connect_skeleton = [
     (0, 2),  # nose -> right_eye
     (1, 3),  # left_eye -> left_ear
     (2, 4),  # right_eye -> right_ear
-    (3, 5),  # left_ear -> left_shoulder
-    (4, 6),  # right_ear -> right_shoulder
+    (0, 5),  # nose -> left_shoulder
+    (0, 6),  # nose -> right_shoulder
     (5, 7),  # left_shoulder -> left_elbow
     (6, 8),  # right_shoulder -> right_elbow
     (7, 9),  # left_elbow -> left_wrist
