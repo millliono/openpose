@@ -35,7 +35,7 @@ def person_paf(person, limb, size, visibility):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
     
-    if part1_vis and part2_vis not in visibility:
+    if (part1_vis and part2_vis) not in visibility:
         return (0, 0), np.full((size[1], size[0]), False)
     else:
         part1 = np.array([person[limb[0]][0], person[limb[0]][1]])
