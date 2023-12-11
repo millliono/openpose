@@ -13,7 +13,7 @@ def get_heatmaps(keypoints, size, visibility):
         x, y = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
         dist = (x - center[0])**2 + (y - center[1])**2
         exponent = dist / (2.0 * sigma * sigma)
-        mask = exponent <= 2.3  
+        mask = exponent <= 2.3
         gauss = np.exp(-exponent)
         gauss = mask * gauss
         return gauss
@@ -34,7 +34,10 @@ def get_heatmaps(keypoints, size, visibility):
 def person_paf(person, limb, size, visibility):
     part1_vis = person[limb[0]][2]
     part2_vis = person[limb[1]][2]
-    if part1_vis and part2_vis in visibility:
+    
+    if part1_vis and part2_vis not in visibility:
+        return (0, 0), np.full((size[1], size[0]), False)
+    else:
         part1 = np.array([person[limb[0]][0], person[limb[0]][1]])
         part2 = np.array([person[limb[1]][0], person[limb[1]][1]])
 
@@ -50,7 +53,7 @@ def person_paf(person, limb, size, visibility):
         vec_xp = np.array([xp_x, xp_y])
 
         dot1 = np.dot(v_norm, vec_xp).reshape(size[1], size[0])
-        cond1 = np.logical_and(dot1 >= -(0.2*v_magn), dot1 <= 1.2*v_magn)
+        cond1 = np.logical_and(dot1 >= -(0.2 * v_magn), dot1 <= 1.2 * v_magn)
 
         s_thresh = 1
         dot2 = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size[1], size[0]))
@@ -59,8 +62,6 @@ def person_paf(person, limb, size, visibility):
         location = np.logical_and(cond1, cond2)
 
         return v_norm, location
-    else:
-        return (0, 0), np.full((size[1], size[0]), False)
 
 
 def get_pafs(keypoints, size, visibility):

@@ -46,68 +46,69 @@ def get_limbs(pafs, bodyparts, image_size):
         partsA = bodyparts[partA_id]
         partsB = bodyparts[partB_id]
 
+        if not(partsA and partsB): 
+            continue
+
         pafx = pafs[2 * i]
         pafy = pafs[2 * i + 1]
 
-        if partsA and partsB:
-            possible_limbs = []  # stores all possible limb connections
-            for pka in partsA:
-                for pkb in partsB:
-                    v = pkb["coords"] - pka["coords"]
-                    v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-5
-                    v_norm = v / v_magn
+        possible_limbs = []  # stores all possible limb connections
+        for pka in partsA:
+            for pkb in partsB:
+                v = pkb["coords"] - pka["coords"]
+                v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-5
+                v_norm = v / v_magn
 
-                    # line
-                    line_x = np.round(np.linspace(pka["coords"][0], pkb["coords"][0], 10)).astype(int)
-                    line_y = np.round(np.linspace(pka["coords"][1], pkb["coords"][1], 10)).astype(int)
+                # line
+                line_x = np.round(np.linspace(pka["coords"][0], pkb["coords"][0], 10)).astype(int)
+                line_y = np.round(np.linspace(pka["coords"][1], pkb["coords"][1], 10)).astype(int)
 
-                    # flip indexing for ij coords
-                    paf_x = pafx[line_y, line_x]
-                    paf_y = pafy[line_y, line_x]
-                    paf_vec = (paf_x, paf_y)
+                # flip indexing for ij coords
+                paf_x = pafx[line_y, line_x]
+                paf_y = pafy[line_y, line_x]
+                paf_vec = (paf_x, paf_y)
 
-                    scores = np.dot(v_norm, paf_vec)
-                    # penalize limbs longer than image.H/2
-                    penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
-                    penalized_score = scores.mean() + penalty
+                scores = np.dot(v_norm, paf_vec)
+                # penalize limbs longer than image.H/2
+                penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
+                penalized_score = scores.mean() + penalty
 
-                    criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
-                    criterion2 = penalized_score > 0
+                criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
+                criterion2 = penalized_score > 0
 
-                    if criterion1 and criterion2:
-                        limb = {
-                            "part_a": pka,
-                            "part_b": pkb,
-                            "limb_score": penalized_score,
-                            "limb_id": i,
-                        }
+                if criterion1 and criterion2:
+                    limb = {
+                        "part_a": pka,
+                        "part_b": pkb,
+                        "limb_score": penalized_score,
+                        "limb_id": i,
+                    }
+                    possible_limbs.append(limb)
 
-                        possible_limbs.append(limb) 
+        # calculates valid limb connections
+        num_a = len(bodyparts[partA_id])
+        num_b = len(bodyparts[partB_id])
+        max_connections = min(num_a, num_b)
 
-            # calculates valid limb connections
-            num_a = len(bodyparts[partA_id])
-            num_b = len(bodyparts[partB_id])
-            max_connections = min(num_a, num_b)
+        srt = sorted(possible_limbs, key=lambda x: x["limb_score"], reverse=True)
 
-            srt = sorted(possible_limbs, key=lambda x: x["limb_score"], reverse=True)
+        cntr = 0
+        used = []
+        for x in srt:
+            if x["part_a"]["id"] not in used and x["part_b"]["id"] not in used:
+                valid_limbs.append(x)
+                cntr += 1
+                used.append(x["part_a"]["id"])
+                used.append(x["part_b"]["id"])
 
-            cntr = 0
-            used = []
-            for x in srt:
-                if x["part_a"]["id"] not in used and x["part_b"]["id"] not in used:
-                    valid_limbs.append(x)
-                    cntr += 1
-                    used.append(x["part_a"]["id"])
-                    used.append(x["part_b"]["id"])
-
-                    if cntr >= max_connections:
-                        break
+                if cntr >= max_connections:
+                    break
     return valid_limbs
 
 
 def group_limbs(connections):
 
-    def find_in_list(my_list, item):
+    def find(my_list, item):
         for index, x in enumerate(my_list):
             if item in x:
                 return index
@@ -115,8 +116,8 @@ def group_limbs(connections):
 
     groups = []
     for limb in connections:
-        index_a = find_in_list(groups, limb["part_a"]["id"])
-        index_b = find_in_list(groups, limb["part_b"]["id"])
+        index_a = find(groups, limb["part_a"]["id"])
+        index_b = find(groups, limb["part_b"]["id"])
 
         if index_a is None and index_b is None:
             groups.append([limb["part_a"]["id"], limb["part_b"]["id"]])
