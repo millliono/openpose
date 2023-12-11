@@ -4,8 +4,6 @@ from PIL import Image
 import numpy as np
 from collections import defaultdict
 import torch.utils.data as data
-import torch
-from torchvision.transforms import v2
 import dataset_utils
 import transforms
 

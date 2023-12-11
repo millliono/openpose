@@ -15,7 +15,6 @@ def get_bodyparts(heatmaps):
 
         if peaks_coords[0].size == 0:
             all_bodyparts.append([])
-
         else:
             my_list = []
             peaks_scores = heatmaps[i][peaks_coords]
@@ -26,7 +25,7 @@ def get_bodyparts(heatmaps):
                 bodypart = {
                     "coords": peaks_coords[j],
                     "score": peaks_scores[j],
-                    "part_id": i,
+                    "part_type": i,
                     "id": unique_id,
                 }
                 unique_id += 1
@@ -46,7 +45,7 @@ def get_limbs(pafs, bodyparts, image_size):
         partsA = bodyparts[partA_id]
         partsB = bodyparts[partB_id]
 
-        if not(partsA and partsB): 
+        if not (partsA and partsB):
             continue
 
         pafx = pafs[2 * i]
@@ -81,7 +80,7 @@ def get_limbs(pafs, bodyparts, image_size):
                         "part_a": pka,
                         "part_b": pkb,
                         "limb_score": penalized_score,
-                        "limb_id": i,
+                        "limb_type": i,
                     }
                     possible_limbs.append(limb)
 
@@ -106,7 +105,7 @@ def get_limbs(pafs, bodyparts, image_size):
     return valid_limbs
 
 
-def group_limbs(connections):
+def group_parts(valid_limbs):
 
     def find(my_list, item):
         for index, x in enumerate(my_list):
@@ -115,7 +114,7 @@ def group_limbs(connections):
         return None  # Item not found
 
     groups = []
-    for limb in connections:
+    for limb in valid_limbs:
         index_a = find(groups, limb["part_a"]["id"])
         index_b = find(groups, limb["part_b"]["id"])
 
@@ -135,7 +134,6 @@ def group_limbs(connections):
                 del groups[srt[0]]
                 del groups[srt[1]]
                 groups.append(merge)
-
     return groups
 
 
@@ -159,14 +157,15 @@ def post_process(heatmaps, pafs, image_size):
 
     bodyparts = get_bodyparts(heatmaps)
     limbs = get_limbs(pafs, bodyparts, image_size)
-    groups = group_limbs(limbs)
+    groups = group_parts(limbs)
 
     flatten = [y for x in bodyparts for y in x]
     idtopart = {part['id']: part for part in flatten}
 
     humans = []
     for x in groups:
-        humans.append([idtopart[i] for i in x])
+        if len(x) >= 4:  # only kepp humans with many parts
+            humans.append([idtopart[i] for i in x])
 
     return humans
 
@@ -176,7 +175,7 @@ def coco_format(humans):
     for x in humans:
         kpts = [[0, 0, 0]] * 17
         for y in x:
-            kpts[y["part_id"]] = y["coords"].tolist() + [1]
+            kpts[y["part_type"]] = y["coords"].tolist() + [1]
         coco.append(kpts)
     return coco
 
