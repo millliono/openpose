@@ -170,14 +170,21 @@ def post_process(heatmaps, pafs, image_size):
     return humans
 
 
-def coco_format(humans):
-    coco_humans = []
+def format(humans):
+    formated = []
     for x in humans:
-        kpts = [[0, 0, 0]] * 17
-        for y in x:
-            kpts[y["part_type"]] = y["coords"].tolist() + [1]
-        coco_humans.append(kpts)
-    coco_humans = np.array(coco_humans).reshape(-1, 51).tolist()
+        kpts = [[0, 0, 0]] * 18
+        for part in x:
+            kpts[part["part_type"]] = part["coords"].tolist() + [1]
+        formated.append(kpts)
+    return formated
+
+
+def coco_format(humans):
+    formated = format(humans)
+    for i in range(len(formated)):
+        formated[i].pop(17) # remove neck
+    coco_humans = np.array(formated).reshape(-1, 51).tolist()
     return coco_humans
 
 

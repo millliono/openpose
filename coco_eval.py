@@ -8,7 +8,6 @@ from torchvision.transforms import v2
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-inp_size = 368
 coco_dataset = coco_dataset.CocoKeypoints(
     root=str(pathlib.Path("../coco") / "images" / "val2017"),
     annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
@@ -22,7 +21,7 @@ for i in tqdm(range(len(coco_dataset.ids))):
 
     if not humans:
         continue
-    
+
     coco_humans = post.coco_format(humans)
     for x in coco_humans:
         person = {
@@ -37,8 +36,8 @@ with open("predictions.json", "w") as f:
     json.dump(my_list, f)
 
 annFile = str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json")
-cocoGt = COCO(annFile)  
-cocoDt = cocoGt.loadRes("predictions.json")  
+cocoGt = COCO(annFile)
+cocoDt = cocoGt.loadRes("predictions.json")
 
 cocoEval = COCOeval(cocoGt, cocoDt, "keypoints")
 cocoEval.params.imgIds = coco_dataset.ids

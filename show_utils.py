@@ -54,9 +54,7 @@ def draw_skeleton(
     img_to_draw = image
     draw = ImageDraw.Draw(img_to_draw)
 
-    coco_humans = np.array(coco_humans).reshape(-1, 17, 3)
     for x in coco_humans:
-
         # draw limbs
         color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 

@@ -30,7 +30,7 @@ class CocoKeypoints(data.Dataset):
 
     def exists_keypoint_annotation(self, img_id):
         target = self._load_target(img_id)
-        keypoint_anns = [x for x in target if x["num_keypoints"] > 0]
+        keypoint_anns = [True for x in target if x["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
@@ -47,6 +47,7 @@ class CocoKeypoints(data.Dataset):
         target = self._load_target(id)
         anns = (image.copy(), target)
 
+        target = [x for x in target if x["num_keypoints"] > 0] # remove non-keypoint-annotated targets
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
@@ -57,7 +58,8 @@ class CocoKeypoints(data.Dataset):
             tf = self.transform({'image': image, 'kpt_coords': coords, 'kpt_vis': vis})
             image, coords, vis = tf['image'], tf["kpt_coords"], tf["kpt_vis"]
 
-        keypoints = np.concatenate((transforms.resize_keypoints(coords, stride=8), vis), axis=2)
+        keypoints = np.concatenate((transforms.resize_keypoints(coords, stride=8), vis), axis=2).tolist()
+        keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
         targ_size = np.array(image.size) // 8
         heatmaps = dataset_utils.get_heatmaps(keypoints, targ_size, visibility=[1, 2])
