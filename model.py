@@ -124,13 +124,13 @@ class openpose(nn.Module):
 
         self.backbone = backbone()
 
-        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 32])
-        self.paf1 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
-        self.paf2 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
-        self.paf3 = inner_block(in_channels=160, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 32])
+        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 34])
+        self.paf1 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
+        self.paf2 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
+        self.paf3 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
 
-        self.htmp0 = inner_block(in_channels=160, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 18])
-        self.htmp1 = inner_block(in_channels=178, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 18])
+        self.htmp0 = inner_block(in_channels=162, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 19])
+        self.htmp1 = inner_block(in_channels=181, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
 
     def forward(self, x):
         save_for_loss_pafs = []

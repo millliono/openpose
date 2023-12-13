@@ -16,8 +16,8 @@ coco_dataset = coco_dataset.CocoKeypoints(
 my_list = []
 for i in tqdm(range(len(coco_dataset.ids))):
     inp, pafs, heatmaps, paf_locs, anns, id = coco_dataset[i]
-    inp = v2.ToPILImage()(inp)
-    humans = post.post_process(heatmaps, pafs, inp.size)
+    inp_size = v2.ToPILImage()(inp).size
+    humans = post.post_process(heatmaps, pafs, inp_size)
 
     if not humans:
         continue

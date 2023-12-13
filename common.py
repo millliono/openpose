@@ -68,8 +68,8 @@ connect_skeleton = [
     (0, 2),  # nose -> right_eye
     (1, 3),  # left_eye -> left_ear
     (2, 4),  # right_eye -> right_ear
-    (3, 5),  # left_ear -> left_shoulder
-    (4, 6),  # right_ear -> right_shoulder
+    # (3, 5),  # left_ear -> left_shoulder
+    # (4, 6),  # right_ear -> right_shoulder
     (0, 17),  # nose -> neck
     (17, 5),  # neck -> left_shoulder
     (17, 6),  # neck -> right_shoulder
