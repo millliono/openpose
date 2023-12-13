@@ -113,28 +113,54 @@ def group_parts(valid_limbs):
                 return index
         return None  # Item not found
 
-    groups = []
+    part_groups = []
     for limb in valid_limbs:
-        index_a = find(groups, limb["part_a"]["id"])
-        index_b = find(groups, limb["part_b"]["id"])
+        index_a = find(part_groups, limb["part_a"]["id"])
+        index_b = find(part_groups, limb["part_b"]["id"])
 
         if index_a is None and index_b is None:
-            groups.append([limb["part_a"]["id"], limb["part_b"]["id"]])
+            part_groups.append([limb["part_a"]["id"], limb["part_b"]["id"]])
 
         elif index_a is not None and index_b is None:
-            groups[index_a].append(limb["part_b"]["id"])
+            part_groups[index_a].append(limb["part_b"]["id"])
 
         elif index_a is None and index_b is not None:
-            groups[index_b].append(limb["part_a"]["id"])
+            part_groups[index_b].append(limb["part_a"]["id"])
 
         elif index_a is not None and index_b is not None:
             if index_a != index_b:
                 srt = sorted((index_a, index_b), reverse=True)
-                merge = groups[index_a] + groups[index_b]
-                del groups[srt[0]]
-                del groups[srt[1]]
-                groups.append(merge)
-    return groups
+                merge = part_groups[index_a] + part_groups[index_b]
+                del part_groups[srt[0]]
+                del part_groups[srt[1]]
+                part_groups.append(merge)
+    return part_groups
+
+
+def group_limbs(valid_limbs, part_groups):
+    limb_groups = [[] for _ in range(len(part_groups))]
+
+    for limb in valid_limbs:
+        for i in range(len(part_groups)):
+            if limb["part_a"]["id"] in part_groups[i] and limb["part_b"]["id"] in part_groups[i]:
+                limb_groups[i].append(limb)
+                break
+        else:
+            # This block is executed if the 'break' statement is NOT encountered in the for loop
+            print("Limb not assigned to any group:", limb)
+
+    return limb_groups
+
+
+def supress_low_conf(limb_groups):
+    keep = []
+    for group in limb_groups:
+        score = 0
+        for x in group:
+            score += x["limb_score"] + x["part_a"]["score"] + x["part_b"]["score"]
+        if len(group) >= 3 and (score / len(group)) > 0.2:
+            keep.append(group)
+    return keep
 
 
 def post_process(heatmaps, pafs, image_size):
@@ -156,16 +182,18 @@ def post_process(heatmaps, pafs, image_size):
     pafs = pafs.numpy()
 
     bodyparts = get_bodyparts(heatmaps)
-    limbs = get_limbs(pafs, bodyparts, image_size)
-    groups = group_parts(limbs)
-
-    flatten = [y for x in bodyparts for y in x]
-    idtopart = {part['id']: part for part in flatten}
+    valid_limbs = get_limbs(pafs, bodyparts, image_size)
+    part_groups = group_parts(valid_limbs)
+    limb_groups = group_limbs(valid_limbs, part_groups)
+    confident = supress_low_conf(limb_groups)
 
     humans = []
-    for x in groups:
-        if len(x) >= 4:  # only kepp humans with many parts
-            humans.append([idtopart[i] for i in x])
+    for group in confident:
+        my_list = []
+        for x in group:
+            my_list.append(x["part_a"])
+            my_list.append(x["part_b"])
+        humans.append(my_list)
 
     return humans
 
@@ -173,7 +201,7 @@ def post_process(heatmaps, pafs, image_size):
 def format(humans):
     formated = []
     for x in humans:
-        kpts = [[0, 0, 0]] * 18
+        kpts = [[0, 0, 0] for _ in range(18)]
         for part in x:
             kpts[part["part_type"]] = part["coords"].tolist() + [1]
         formated.append(kpts)
@@ -183,17 +211,6 @@ def format(humans):
 def coco_format(humans):
     formated = format(humans)
     for i in range(len(formated)):
-        formated[i].pop(17) # remove neck
+        formated[i].pop(17)  # remove neck
     coco_humans = np.array(formated).reshape(-1, 51).tolist()
     return coco_humans
-
-
-def supress_low_conf_people(groups):
-    keep = []
-    for x in groups:
-        score = 0
-        for y in x:
-            score += y["limb_score"] + y["part_a"]["score"] + y["part_b"]["score"]
-        if score / len(x) > 0.2 and len(x) >= 3:
-            keep.append(x)
-    return keep
