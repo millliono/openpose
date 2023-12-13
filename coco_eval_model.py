@@ -16,7 +16,7 @@ coco_dataset = coco_dataset.CocoKeypoints(
     transform=None)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"  # comment when using modern gpu
+# device = "cpu"  # comment when using modern gpu
 if device == "cuda":
     device = "cuda:0"
     model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
@@ -27,7 +27,7 @@ model.eval()
 
 with torch.no_grad():
     my_list = []
-    for i in tqdm(range(len(coco_dataset.ids)-2340)):
+    for i in tqdm(range(len(coco_dataset.ids))):
         inp, pafs, heatmaps, paf_locs, anns, id = coco_dataset[i]
         inp_size = v2.ToPILImage()(inp).size
 
