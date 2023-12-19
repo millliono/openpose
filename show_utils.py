@@ -1,80 +1,107 @@
 import torch
 import matplotlib.pyplot as plt
-import torchvision.transforms.functional as F
 import numpy as np
-from PIL import ImageDraw
-import common
+from PIL import ImageDraw, Image, ImageOps
+import random
 
 
 def show_coco(image, target, coco, draw_bbox):
     plt.axis("off")
     plt.imshow(np.asarray(image))
-    # Plot segmentation and bounding box.
     coco.showAnns(target, draw_bbox)
 
 
-def show_tensors(imgs):
-    """
-    shows a list of tensor images using subplots
-    """
-    if not isinstance(imgs, list):
-        imgs = [imgs]
-    if len(imgs) > 1:
-        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(30, 9))
-    else:
-        fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(4, 4))
-    for i, img in enumerate(imgs):
-        img = img.detach()
-        img = img.numpy()
-        axs[0, i].imshow(img)
-        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+def blend(conf_maps, image, rows, cols, figsize):
+    conf_maps = [Image.fromarray((x * 255)).convert("L") for x in conf_maps]
+    conf_maps = [ImageOps.colorize(x, black="blue", white="orange") for x in conf_maps]
+    conf_maps = [x.resize(image.size, resample=Image.NEAREST) for x in conf_maps]
+    blended = [Image.blend(x, image, 0.5) for x in conf_maps]
+    plot_grid(blended, rows, cols, figsize)
 
 
-def show_heatmaps(heatmaps):
-    """
-    shows all (17) heatmap points using subplots
-    """
-    my_list = []
-    for x in heatmaps:
-        my_list.append(x)
-
-    show_tensors(my_list)
-
-
-def show_pafs(pafs):
-    """
-    shows all (32) pafs in single figure (x_ccord, y_coord)
-    using subplots
-    """
-    my_list = []
-    for x in pafs:
-        my_list.append(x)
-    show_tensors(my_list)
+def plot_grid(images, rows, cols, figsize):
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    for i, ax in enumerate(axes.flat):
+        if i < len(images):
+            ax.imshow(images[i])
+            ax.axis('off')
+        else:
+            ax.axis('off')
+    plt.tight_layout()
+    plt.show()
 
 
-def show_pafs_quiver(pafs, keypoints, size):
-    """
-    shows all (16) pafs as vector fields using subplots
-    """
-    num_images = pafs.size(dim=0) / 2
+def surface(image):
+    x_dim = np.arange(0, image.shape[1], 1)
+    y_dim = np.arange(0, image.shape[0], 1)
+    X, Y = np.meshgrid(x_dim, y_dim)
+    Z = image.flatten()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    ax.plot_surface(X, Y, Z.reshape(image.shape), cmap="viridis")
+
+
+@torch.no_grad()
+def draw_skeleton(
+    image,
+    coco_humans,
+    connectivity,
+    radius: int = 1.5,
+    width: int = 2,
+):
+    img_to_draw = image
+    draw = ImageDraw.Draw(img_to_draw)
+
+    for x in coco_humans:
+        # draw limbs
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+        for connection in connectivity:
+            if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
+                start_pt_x = x[connection[0]][0]
+                start_pt_y = x[connection[0]][1]
+
+                end_pt_x = x[connection[1]][0]
+                end_pt_y = x[connection[1]][1]
+
+                draw.line(
+                    ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
+                    width=width,
+                    fill=color,
+                )
+        # draw keypoints
+        for y in x:
+            if y[2] != 0:
+                x1 = y[0] - radius
+                x2 = y[0] + radius
+                y1 = y[1] - radius
+                y2 = y[1] + radius
+                draw.ellipse(
+                    [x1, y1, x2, y2],
+                    outline=None,
+                    width=0,
+                    fill="orange",
+                )
+
+    img = np.array(img_to_draw)
+    plt.imshow(img)
+
+
+def pafs_quiver(pafs, size):
+    num_images = len(pafs) // 2
     num_cols = 4
     num_rows = (num_images - 1) // num_cols + 1
 
-    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(15, 12))
+    fig, axes = plt.subplots(int(num_rows), num_cols, figsize=(18, 18))
 
     if num_rows == 1:
         axes = axes.reshape(1, -1)
     elif num_cols == 1:
         axes = axes.reshape(-1, 1)
 
-
     for i in range(len(pafs) // 2):
-        partA_id = common.connect_skeleton[i][0]
-        partB_id = common.connect_skeleton[i][1]
-
-        partsA = [x[partA_id] for x in keypoints]
-        partsB = [x[partB_id] for x in keypoints]
-
         pafx = pafs[2 * i]
         pafy = pafs[2 * i + 1]
 
@@ -91,82 +118,17 @@ def show_pafs_quiver(pafs, keypoints, size):
             angles="xy",
             pivot="tail",
         )
-
-        axes[row_idx, col_idx].scatter([x[0] for x in partsA], [x[1] for x in partsA], color='r', s=3)
-        axes[row_idx, col_idx].scatter([x[0] for x in partsB], [x[1] for x in partsB], color='b', s=3)
-        # axes[row_idx, col_idx].scatter(-0, -0, color='r', s=5)
         axes[row_idx, col_idx].invert_yaxis()
-
     plt.tight_layout()
 
 
-def show_pafs_quiver_combined(pafs, size):
-    paf_x = []
-    for i in range(0, pafs.size(dim=0), 2):
-        paf_x.append(pafs[i])
+def pafs_quiver_combined(pafs, size):
+    paf_x = pafs[[x for x in range(len(pafs)) if x % 2 == 0]]
+    paf_y = pafs[[x for x in range(len(pafs)) if x % 2 == 1]]
 
-    paf_y = []
-    for i in range(1, pafs.size(dim=0), 2):
-        paf_y.append(pafs[i])
-
-    paf_x = torch.sum(torch.stack(paf_x), dim=0)
-    paf_y = torch.sum(torch.stack(paf_y), dim=0)
+    paf_x = np.sum(paf_x, axis=0)
+    paf_y = np.sum(paf_y, axis=0)
 
     px, py = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
     plt.quiver(px, py, paf_x, paf_y, scale=1, scale_units="xy", angles="xy", pivot="tail")
     plt.gca().invert_yaxis()
-
-
-@torch.no_grad()
-def draw_keypoints(
-    image,
-    keypoints,
-    connectivity,
-    keypoint_color="blue",
-    line_color="yellow",
-    radius: int = 3,
-    width: int = 3,
-):
-    img_to_draw = image
-    draw = ImageDraw.Draw(img_to_draw)
-
-    for x in keypoints:
-        for y in x:
-            if y[2] != 0:
-                x1 = y[0] - radius
-                x2 = y[0] + radius
-                y1 = y[1] - radius
-                y2 = y[1] + radius
-                draw.ellipse([x1, y1, x2, y2], fill=keypoint_color, outline=None, width=0)
-
-        if connectivity:
-            for connection in connectivity:
-                if x[connection[0]][2] != 0 and x[connection[1]][2] != 0:
-                    start_pt_x = x[connection[0]][0]
-                    start_pt_y = x[connection[0]][1]
-
-                    end_pt_x = x[connection[1]][0]
-                    end_pt_y = x[connection[1]][1]
-
-                    draw.line(
-                        ((start_pt_x, start_pt_y), (end_pt_x, end_pt_y)),
-                        width=width,
-                        fill=line_color,
-                    )
-
-    img = np.array(img_to_draw)
-    plt.imshow(img)
-
-
-def surf_heatmap(heatmap):
-    x_dim = np.arange(0, heatmap.shape[1], 1)
-    y_dim = np.arange(0, heatmap.shape[0], 1)
-    X, Y = np.meshgrid(x_dim, y_dim)
-    Z = heatmap.flatten()
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-
-    ax.plot_surface(X, Y, Z.reshape(heatmap.shape), cmap="viridis")
-
-    ax.set_title("surf plot")

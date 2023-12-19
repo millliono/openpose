@@ -1,21 +1,23 @@
 import torch
 from tqdm import tqdm
 import pathlib
-from torchvision import transforms
 from model import openpose
 from loss import PoseLoss
 from torch.utils.data import DataLoader
 from coco_dataset import CocoKeypoints
+from torchvision.transforms import v2
+import transforms as mytf
 from torch.utils.tensorboard import SummaryWriter
+import torch.nn as nn
 
 # Hyperparameters etc.
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 1
-EPOCHS = 1
-NUM_WORKERS = 6
-COMMENT = "LR_1e-4_BATCH_16"
-LOG_STEP = 10
+EPOCHS = 60
+NUM_WORKERS = 10
+COMMENT = ""
+LOG_STEP = 1000
 PIN_MEMORY = True
 LOAD_MODEL = False
 
@@ -26,7 +28,7 @@ def train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer):
     loop = tqdm(train_loader, leave=True)
     run_loss = 0.0
     for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+        image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
         _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
         loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
@@ -44,22 +46,24 @@ def train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer):
     writer.flush()
 
 
-def test_fn(test_loader, model, loss_fn, device, epoch, writer):
+def test_fn(test_loader, model, device, epoch, writer):
     model.eval()
 
     loop = tqdm(test_loader, leave=True)
     run_vloss = 0.0
-    for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+    with torch.no_grad():
+        for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+            image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
-        _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
+            pred_pafs, pred_heatmaps, _, _ = model(image)
 
-        vloss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
-        run_vloss += vloss.item()
+            vloss = nn.MSELoss()(pred_pafs, targ_pafs) + nn.MSELoss()(pred_heatmaps, targ_heatmaps)
+            run_vloss += vloss.item()
 
     avg_vloss = run_vloss / len(test_loader)
     writer.add_scalar('val_loss', avg_vloss, epoch)
     writer.flush()
+    return avg_vloss
 
 
 def collate_fn(batch):
@@ -71,7 +75,7 @@ def collate_fn(batch):
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = "cpu"  # comment if using modern gpu
+    # device = "cpu"  # comment if using modern gpu
 
     if device == "cuda":
         model = torch.nn.DataParallel(openpose()).cuda()
@@ -84,32 +88,21 @@ def main():
     model.train()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-    loss_fn = PoseLoss()
 
-    inp_size = (368, 368)
-    targ_size = (46, 46)
-
+    inp_size = 368
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
-        input_transform=transforms.Compose([
-            transforms.Resize(inp_size),
-            transforms.ToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]),
-        targ_size=targ_size)
+        transform=v2.Compose([mytf.RandomCrop(0.8),
+                              mytf.Resize(inp_size),
+                              mytf.Pad(inp_size),
+                              mytf.RandomRotation(40)]))
 
     test_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "val2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-        input_transform=transforms.Compose([
-            transforms.Resize(inp_size),
-            transforms.ToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]),
-        targ_size=targ_size)
+        transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(inp_size),
+                              mytf.Pad(inp_size)]))
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -132,13 +125,17 @@ def main():
     )
 
     writer = SummaryWriter(comment=COMMENT)
-    for epoch in range(EPOCHS):
-        train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer)
-        test_fn(test_loader, model, loss_fn, device, epoch, writer)
-    writer.close()
 
-    torch.save(model.state_dict(), "save_model.pth")
-    print("Saved openpose to save_model.pth")
+    best_val_loss = float('inf')
+    for epoch in range(EPOCHS):
+        train_fn(train_loader, model, optimizer, PoseLoss(), device, epoch, writer)
+        avg_vloss = test_fn(test_loader, model, device, epoch, writer)
+
+        if avg_vloss < best_val_loss:
+            best_val_loss = avg_vloss
+            torch.save(model.state_dict(), "save_model.pth")
+            print(f"best model at epoch: {epoch}")
+    writer.close()
 
 
 if __name__ == "__main__":

@@ -1,24 +1,22 @@
 import os.path
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Tuple
 from PIL import Image
 import numpy as np
 from collections import defaultdict
-import dataset_utils
 import torch.utils.data as data
-import torch
+import dataset_utils
+import transforms
 
 
 class CocoKeypoints(data.Dataset):
 
-    def __init__(self, root, annFile, targ_size=(46, 46), input_transform=None, train=True):
+    def __init__(self, root, annFile, transform):
         from pycocotools.coco import COCO
 
         self.root = root
         self.coco = COCO(annFile)
         self.ids = self.coco.getImgIds(catIds=self.coco.getCatIds(catNms="person"))
-        self.input_transform = input_transform
-        self.train = train
-        self.targ_size = targ_size
+        self.transform = transform
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
@@ -32,7 +30,7 @@ class CocoKeypoints(data.Dataset):
 
     def exists_keypoint_annotation(self, img_id):
         target = self._load_target(img_id)
-        keypoint_anns = [x for x in target if x["num_keypoints"] > 0]
+        keypoint_anns = [True for x in target if x["num_keypoints"] > 0]
         return True if len(keypoint_anns) > 0 else False
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
@@ -42,51 +40,34 @@ class CocoKeypoints(data.Dataset):
                 dict_of_lists[key].append(value)
         return dict(dict_of_lists)
 
-    def resize_keypoints(self, keypoints, old_size, new_size):
-        scale_x = old_size[0] / new_size[0]
-        scale_y = old_size[1] / new_size[1]
-
-        visibility = keypoints[:, :, 2].reshape(-1, 17, 1)
-        visible = np.where(visibility > 0, 1, 0)
-
-        coords = keypoints[:, :, :2].reshape(-1, 17, 2)
-        resized = (coords + np.array([0.5, 0.5])) / np.array([scale_x, scale_y]) - np.array([0.5, 0.5])
-
-        resized = resized * visible
-        res = np.concatenate((resized, visibility), axis=2)
-        return res
-
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
 
         image = self._load_image(id)
         target = self._load_target(id)
+        anns = (image.copy(), target)
 
-        # input transforms
-        tf_image = self.input_transform(image)
-
-        if not self.train:
-            return tf_image, torch.tensor(image.size), id
-
-        # mask_out = dataset_utils.get_mask_out(image, target, self.coco, self.targ_size)
-
+        target = [x for x in target if x["num_keypoints"] > 0] # remove non-keypoint-annotated targets
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
-        keypoints = self.resize_keypoints(keypoints, image.size, self.targ_size)
-        keypoints = keypoints.tolist()
+        coords = keypoints[:, :, :2].reshape(-1, 17, 2)
+        vis = keypoints[:, :, 2].reshape(-1, 17, 1)
+
+        if self.transform:
+            tf = self.transform({'image': image, 'kpt_coords': coords, 'kpt_vis': vis})
+            image, coords, vis = tf['image'], tf["kpt_coords"], tf["kpt_vis"]
+
+        keypoints = np.concatenate((transforms.resize_keypoints(coords, stride=8), vis), axis=2).tolist()
         keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
-        heatmaps = dataset_utils.get_heatmaps(keypoints, self.targ_size, visibility=[1, 2])
-        pafs = dataset_utils.get_pafs(keypoints, self.targ_size, visibility=[1, 2])
+        targ_size = np.array(image.size) // 8
+        heatmaps = dataset_utils.get_heatmaps(keypoints, targ_size, visibility=[1, 2])
+        pafs, paf_locs = dataset_utils.get_pafs(keypoints, targ_size, visibility=[1, 2])
 
-        # target transforms
-        heatmaps = torch.tensor(np.array(heatmaps), dtype=torch.float32)
-        pafs = torch.tensor(np.array(pafs), dtype=torch.float32)
+        ts = transforms.ToTensor()({'image': image, 'pafs': pafs, 'heatmaps': heatmaps})
 
-        return tf_image, pafs, heatmaps, keypoints, image, target
+        return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns, id
 
     def __len__(self) -> int:
         return len(self.ids)
-
-

@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.ndimage import gaussian_filter, maximum_filter
+from scipy.ndimage import maximum_filter
 from scipy.ndimage import generate_binary_structure
 import common
 from torchvision import transforms
@@ -15,7 +15,6 @@ def get_bodyparts(heatmaps):
 
         if peaks_coords[0].size == 0:
             all_bodyparts.append([])
-
         else:
             my_list = []
             peaks_scores = heatmaps[i][peaks_coords]
@@ -26,7 +25,7 @@ def get_bodyparts(heatmaps):
                 bodypart = {
                     "coords": peaks_coords[j],
                     "score": peaks_scores[j],
-                    "part_id": i,
+                    "part_type": i,
                     "id": unique_id,
                 }
                 unique_id += 1
@@ -36,8 +35,8 @@ def get_bodyparts(heatmaps):
     return all_bodyparts
 
 
-def get_limb_scores(pafs, bodyparts, image_size):
-    all_limb_scores = []
+def get_limbs(pafs, bodyparts, image_size):
+    valid_limbs = []
 
     for i in range(len(pafs) // 2):
         partA_id = common.connect_skeleton[i][0]
@@ -46,162 +45,121 @@ def get_limb_scores(pafs, bodyparts, image_size):
         partsA = bodyparts[partA_id]
         partsB = bodyparts[partB_id]
 
+        if not (partsA and partsB):
+            continue
+
         pafx = pafs[2 * i]
         pafy = pafs[2 * i + 1]
 
-        if partsA and partsB:
-            my_list = []
-            for pka in partsA:
-                for pkb in partsB:
-                    v = pkb["coords"] - pka["coords"]
-                    v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-8
-                    v_norm = v / v_magn
+        possible_limbs = []  # stores all possible limb connections
+        for pka in partsA:
+            for pkb in partsB:
+                v = pkb["coords"] - pka["coords"]
+                v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-5
+                v_norm = v / v_magn
 
-                    # line
-                    line_x = np.round(np.linspace(pka["coords"][0], pkb["coords"][0], 10)).astype(int)
-                    line_y = np.round(np.linspace(pka["coords"][1], pkb["coords"][1], 10)).astype(int)
+                # line
+                line_x = np.round(np.linspace(pka["coords"][0], pkb["coords"][0], 10)).astype(int)
+                line_y = np.round(np.linspace(pka["coords"][1], pkb["coords"][1], 10)).astype(int)
 
-                    # flip indexing for ij coords
-                    paf_x = pafx[line_y, line_x]
-                    paf_y = pafy[line_y, line_x]
-                    paf_vec = (paf_x, paf_y)
+                # flip indexing for ij coords
+                paf_x = pafx[line_y, line_x]
+                paf_y = pafy[line_y, line_x]
+                paf_vec = (paf_x, paf_y)
 
-                    scores = np.dot(v_norm, paf_vec)
-                    # penalize limbs longer than image.H/2
-                    penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
-                    penalized_score = scores.mean() + penalty
+                scores = np.dot(v_norm, paf_vec)
+                # penalize limbs longer than image.H/2
+                penalty = min(0.5 * image_size[1] / v_magn - 1, 0)
+                penalized_score = scores.mean() + penalty
 
-                    # here 0.8 is too stringent
-                    criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
-                    criterion2 = penalized_score > 0
+                criterion1 = np.count_nonzero(scores > 0.05) > 0.8 * len(scores)
+                criterion2 = penalized_score > 0
 
-                    if criterion1 and criterion2:
-                        limb = {
-                            "part_a": pka,
-                            "part_b": pkb,
-                            "limb_score": penalized_score,
-                            "limb_id": i,
-                        }
+                if criterion1 and criterion2:
+                    limb = {
+                        "part_a": pka,
+                        "part_b": pkb,
+                        "limb_score": penalized_score,
+                        "limb_type": i,
+                    }
+                    possible_limbs.append(limb)
 
-                        my_list.append(limb)
-            all_limb_scores.append(my_list)
-        else:
-            all_limb_scores.append([])
+        # calculates valid limb connections
+        num_a = len(bodyparts[partA_id])
+        num_b = len(bodyparts[partB_id])
+        max_connections = min(num_a, num_b)
 
-    return all_limb_scores
+        srt = sorted(possible_limbs, key=lambda x: x["limb_score"], reverse=True)
 
-
-def get_connections(limb_scores, bodyparts):
-    all_connections = []
-
-    for i in range(len(limb_scores)):
-        if limb_scores[i]:
-            partA_id = common.connect_skeleton[i][0]
-            partB_id = common.connect_skeleton[i][1]
-
-            num_a = len(bodyparts[partA_id])
-            num_b = len(bodyparts[partB_id])
-            max_connections = min(num_a, num_b)
-
-            limb_scores[i] = sorted(limb_scores[i], key=lambda x: x["limb_score"], reverse=True)
-
-            my_list = []
-            used = []
-            for x in limb_scores[i]:
-                if x["part_a"]["id"] not in used and x["part_b"]["id"] not in used:
-                    my_list.append(x)
-                    used.append(x["part_a"]["id"])
-                    used.append(x["part_b"]["id"])
-
-                    if len(my_list) >= max_connections:
-                        break
-            all_connections.append(my_list)
-        else:
-            all_connections.append([])
-
-    return all_connections
-
-
-def find_in_list(my_list, item):
-    for index, x in enumerate(my_list):
-        if item in x:
-            return index
-    return None  # Item not found
-
-
-def group_limbs(connections):
-    groups = []
-    bins = []
-
-    for x in connections:
-        if x:
-            for y in x:
-                index_a = find_in_list(bins, y["part_a"]["id"])
-                index_b = find_in_list(bins, y["part_b"]["id"])
-
-                if index_a is None and index_b is None:
-                    bins.append([y["part_a"]["id"], y["part_b"]["id"]])
-                    groups.append([y])
-
-                elif index_a is not None and index_b is None:
-                    bins[index_a].append(y["part_b"]["id"])
-                    groups[index_a].append(y)
-
-                elif index_a is None and index_b is not None:
-                    bins[index_b].append(y["part_a"]["id"])
-                    groups[index_b].append(y)
-
-                elif index_a is not None and index_b is not None:
-                    if index_a == index_b:
-                        groups[index_a].append(y)
-                    else:
-                        merged_bins = bins[index_a] + bins[index_b]
-                        del bins[index_a]
-                        del bins[index_b]
-                        bins.append(merged_bins)
-
-                        merged_groups = groups[index_a] + groups[index_b]
-                        del groups[index_a]
-                        del groups[index_b]
-                        groups.append(merged_groups)
-    return groups
-
-
-def group_keypoints(groups):
-    # get the unique parts for each group of limbs
-    person_parts = []
-
-    for x in groups:
-        my_list = []
-        for y in x:
-            my_list.append(y["part_a"])
-            my_list.append(y["part_b"])
-        person_parts.append(my_list)
-
-    unique = []
-    for x in person_parts:
-        my_list = []
+        cntr = 0
         used = []
-        for y in x:
-            if y["id"] not in used:
-                my_list.append(y)
-                used.append(y["id"])
-        unique.append(my_list)
+        for x in srt:
+            if x["part_a"]["id"] not in used and x["part_b"]["id"] not in used:
+                valid_limbs.append(x)
+                cntr += 1
+                used.append(x["part_a"]["id"])
+                used.append(x["part_b"]["id"])
 
-    for i in range(len(unique)):
-        unique[i] = sorted(unique[i], key=lambda x: x["part_id"])
+                if cntr >= max_connections:
+                    break
+    return valid_limbs
 
-    return unique
+
+def group_parts(valid_limbs):
+
+    def find(my_list, item):
+        for index, x in enumerate(my_list):
+            if item in x:
+                return index
+        return None  # Item not found
+
+    part_groups = []
+    for limb in valid_limbs:
+        index_a = find(part_groups, limb["part_a"]["id"])
+        index_b = find(part_groups, limb["part_b"]["id"])
+
+        if index_a is None and index_b is None:
+            part_groups.append([limb["part_a"]["id"], limb["part_b"]["id"]])
+
+        elif index_a is not None and index_b is None:
+            part_groups[index_a].append(limb["part_b"]["id"])
+
+        elif index_a is None and index_b is not None:
+            part_groups[index_b].append(limb["part_a"]["id"])
+
+        elif index_a is not None and index_b is not None:
+            if index_a != index_b:
+                srt = sorted((index_a, index_b), reverse=True)
+                merge = part_groups[index_a] + part_groups[index_b]
+                del part_groups[srt[0]]
+                del part_groups[srt[1]]
+                part_groups.append(merge)
+    return part_groups
 
 
-def supress_low_conf_people(groups):
+def group_limbs(valid_limbs, part_groups):
+    limb_groups = [[] for _ in range(len(part_groups))]
+
+    for limb in valid_limbs:
+        for i in range(len(part_groups)):
+            if limb["part_a"]["id"] in part_groups[i] and limb["part_b"]["id"] in part_groups[i]:
+                limb_groups[i].append(limb)
+                break
+        else:
+            # This block is executed if the 'break' statement is NOT encountered in the for loop
+            print("Limb not assigned to any group:", limb)
+
+    return limb_groups
+
+
+def supress_low_conf(limb_groups):
     keep = []
-    for x in groups:
+    for group in limb_groups:
         score = 0
-        for y in x:
-            score += y["limb_score"] + y["part_a"]["score"] + y["part_b"]["score"]
-        if score / len(x) > 0.2 and len(x) >= 3:
-            keep.append(x)
+        for x in group:
+            score += x["limb_score"] + x["part_a"]["score"] + x["part_b"]["score"]
+        if len(group) >= 3 and (score / len(group)) > 0.2:
+            keep.append(group)
     return keep
 
 
@@ -224,20 +182,35 @@ def post_process(heatmaps, pafs, image_size):
     pafs = pafs.numpy()
 
     bodyparts = get_bodyparts(heatmaps)
-    limb_scores = get_limb_scores(pafs, bodyparts, image_size)
-    connections = get_connections(limb_scores, bodyparts)
-    limb_groups = group_limbs(connections)
-    supp = supress_low_conf_people(limb_groups)
-    kpt_groups = group_keypoints(supp)
+    valid_limbs = get_limbs(pafs, bodyparts, image_size)
+    part_groups = group_parts(valid_limbs)
+    limb_groups = group_limbs(valid_limbs, part_groups)
+    confident = supress_low_conf(limb_groups)
 
-    return kpt_groups
+    humans = []
+    for group in confident:
+        my_list = []
+        for x in group:
+            my_list.append(x["part_a"])
+            my_list.append(x["part_b"])
+        humans.append(my_list)
+
+    return humans
 
 
-def coco_format(kpt_groups):
-    keypoints = []
-    for x in kpt_groups:
-        my_list = [[0, 0, 0]] * 18
-        for y in x:
-            my_list[y["part_id"]] = y["coords"].tolist() + [1]
-        keypoints.append(my_list)
-    return keypoints
+def format(humans):
+    formated = []
+    for x in humans:
+        kpts = [[0, 0, 0] for _ in range(18)]
+        for part in x:
+            kpts[part["part_type"]] = part["coords"].tolist() + [1]
+        formated.append(kpts)
+    return formated
+
+
+def coco_format(humans):
+    formated = format(humans)
+    for i in range(len(formated)):
+        formated[i].pop(17)  # remove neck
+    coco_humans = np.array(formated).reshape(-1, 51).tolist()
+    return coco_humans

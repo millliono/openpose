@@ -3,3 +3,5 @@ __pycache__/
 dokimes.ipynb
 predictions.csv
 runs/
+predictions.json
+notes.md
