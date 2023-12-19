@@ -28,7 +28,7 @@ def train_fn(train_loader, model, optimizer, device, epoch, writer):
     loop = tqdm(train_loader, leave=True)
     run_loss = 0.0
     for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-        image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
         pred_pafs, pred_heatmaps = model(image)
 
@@ -54,7 +54,7 @@ def test_fn(test_loader, model, device, epoch, writer):
     run_vloss = 0.0
     with torch.no_grad():
         for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-            image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+            image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
             pred_pafs, pred_heatmaps = model(image)
 
