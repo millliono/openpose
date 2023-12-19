@@ -14,7 +14,7 @@ import torch.nn as nn
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 1
-EPOCHS = 60
+EPOCHS = 200
 NUM_WORKERS = 10
 COMMENT = ""
 LOG_STEP = 1000
@@ -22,16 +22,17 @@ PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-def train_fn(train_loader, model, optimizer, loss_fn, device, epoch, writer):
+def train_fn(train_loader, model, optimizer, device, epoch, writer):
     model.train()
 
     loop = tqdm(train_loader, leave=True)
     run_loss = 0.0
     for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
         image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
-        _, _, save_for_loss_pafs, save_for_loss_htmps = model(image)
 
-        loss = loss_fn(save_for_loss_pafs, save_for_loss_htmps, targ_pafs, targ_heatmaps)
+        pred_pafs, pred_heatmaps = model(image)
+
+        loss = nn.MSELoss()(pred_pafs, targ_pafs) + nn.MSELoss()(pred_heatmaps, targ_heatmaps)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -55,7 +56,7 @@ def test_fn(test_loader, model, device, epoch, writer):
         for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
             image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
-            pred_pafs, pred_heatmaps, _, _ = model(image)
+            pred_pafs, pred_heatmaps = model(image)
 
             vloss = nn.MSELoss()(pred_pafs, targ_pafs) + nn.MSELoss()(pred_heatmaps, targ_heatmaps)
             run_vloss += vloss.item()
@@ -128,7 +129,7 @@ def main():
 
     best_val_loss = float('inf')
     for epoch in range(EPOCHS):
-        train_fn(train_loader, model, optimizer, PoseLoss(), device, epoch, writer)
+        train_fn(train_loader, model, optimizer, device, epoch, writer)
         avg_vloss = test_fn(test_loader, model, device, epoch, writer)
 
         if avg_vloss < best_val_loss:
