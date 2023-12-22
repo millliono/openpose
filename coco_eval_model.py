@@ -31,11 +31,6 @@ with torch.no_grad():
         inp, pafs, heatmaps, paf_locs, anns, id = coco_dataset[i]
         inp_size = v2.ToPILImage()(inp).size
 
-        inp = v2.Compose(
-            [v2.ToImage(),
-            v2.ToDtype(torch.float, scale=True),
-            v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])(inp)
-
         pred_pafs, pred_heatmaps = model(inp.unsqueeze_(0).to(device))
         pred_pafs.squeeze_(0)
         pred_heatmaps.squeeze_(0)
