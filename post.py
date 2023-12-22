@@ -185,15 +185,16 @@ def post_process(heatmaps, pafs, image_size):
     valid_limbs = get_limbs(pafs, bodyparts, image_size)
     part_groups = group_parts(valid_limbs)
     limb_groups = group_limbs(valid_limbs, part_groups)
-    confident = supress_low_conf(limb_groups)
+    confident_groups = supress_low_conf(limb_groups)
 
     humans = []
-    for group in confident:
+    for group in confident_groups:
         my_list = []
         for x in group:
             my_list.append(x["part_a"])
             my_list.append(x["part_b"])
-        humans.append(my_list)
+        unique = list({x['id']: x for x in my_list}.values())
+        humans.append(unique)
 
     return humans
 
