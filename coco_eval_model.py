@@ -10,57 +10,68 @@ from pycocotools.cocoeval import COCOeval
 import model
 import torch
 
-coco_dataset = coco_dataset.CocoKeypoints(
-    root=str(pathlib.Path("../coco") / "images" / "val2017"),
-    annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-    transform=None)
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-# device = "cpu"  # comment when using modern gpu
-if device == "cuda":
-    device = "cuda:0"
-    model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
-    model.load_state_dict(torch.load("save_modelGG.pth"))
-else:
-    model = model.openpose()
-model.eval()
+def coco_eval_model(model):
 
-with torch.no_grad():
-    my_list = []
-    for i in tqdm(range(len(coco_dataset.ids))):
-        inp, pafs, heatmaps, paf_locs, anns, id = coco_dataset[i]
-        inp_size = v2.ToPILImage()(inp).size
+    coco_data = coco_dataset.CocoKeypoints(
+        root=str(pathlib.Path("../coco") / "images" / "val2017"),
+        annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
+        transform=None)
 
-        pred_pafs, pred_heatmaps = model(inp.unsqueeze_(0).to(device))
-        pred_pafs.squeeze_(0)
-        pred_heatmaps.squeeze_(0)
+    model.eval()
 
-        humans = post.post_process(pred_heatmaps.cpu(), pred_pafs.cpu(), inp_size)
+    with torch.no_grad():
+        my_list = []
+        for i in tqdm(range(len(coco_data.ids))):
+            inp, pafs, heatmaps, paf_locs, anns, id = coco_data[i]
+            inp_size = v2.ToPILImage()(inp).size
 
-        if not humans:
-            continue
+            pred_pafs, pred_heatmaps = model(inp.unsqueeze_(0).to(device))
+            pred_pafs.squeeze_(0)
+            pred_heatmaps.squeeze_(0)
 
-        coco_humans = post.coco_format(humans)
-        for x in coco_humans:
-            person = {
-                "image_id": id,
-                "category_id": 1,
-                "keypoints": x,
-                "score": 1,
-            }
-            my_list.append(person)
+            humans = post.post_process(pred_heatmaps.cpu(), pred_pafs.cpu(), inp_size)
 
-with open("predictions.json", "w") as f:
-    json.dump(my_list, f)
+            if not humans:
+                continue
 
-annFile = str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json")
-cocoGt = COCO(annFile)
-cocoDt = cocoGt.loadRes("predictions.json")
+            coco_humans = post.coco_format(humans)
+            for x in coco_humans:
+                person = {
+                    "image_id": id,
+                    "category_id": 1,
+                    "keypoints": x,
+                    "score": 1,
+                }
+                my_list.append(person)
 
-cocoEval = COCOeval(cocoGt, cocoDt, "keypoints")
-cocoEval.params.imgIds = coco_dataset.ids
-cocoEval.evaluate()
-cocoEval.accumulate()
-cocoEval.summarize()
-# return Average Precision
-print(cocoEval.stats[0])
+    with open("predictions.json", "w") as f:
+        json.dump(my_list, f)
+
+    annFile = str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json")
+    cocoGt = COCO(annFile)
+    cocoDt = cocoGt.loadRes("predictions.json")
+
+    cocoEval = COCOeval(cocoGt, cocoDt, "keypoints")
+    cocoEval.params.imgIds = coco_data.ids
+    cocoEval.evaluate()
+    cocoEval.accumulate()
+    cocoEval.summarize()
+    # return Average Precision
+    print(cocoEval.stats[0])
+    return cocoEval.stats[0]
+
+
+if __name__ == '__main__':
+
+    save_path = "save_model.pth"
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        device = "cuda:0"
+        model = torch.nn.DataParallel(model.openpose(), device_ids=[0])
+        model.load_state_dict(torch.load(save_path))
+    else:
+        model = model.openpose()
+
+    coco_eval_model(model)
