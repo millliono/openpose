@@ -12,17 +12,13 @@ import torch.nn as nn
 from coco_eval_model import coco_eval_model
 import os
 
-# Hyperparameters etc.
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
-BATCH_SIZE = 1
+BATCH_SIZE = 16
 EPOCHS = 200
 NUM_WORKERS = 10
 MODEL_NAME = "ff0"
 LOG_STEP = 1000
-PIN_MEMORY = True
-LOAD_MODEL = False
-
 
 def train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer):
     model.train()
@@ -67,6 +63,7 @@ def test_fn(test_loader, model, loss_fcn, device, epoch, writer):
     writer.add_scalar('val_loss', vloss, epoch)
     writer.flush()
 
+
 def collate_fn(batch):
     images = torch.utils.data.dataloader.default_collate([b[0] for b in batch])
     pafs = torch.utils.data.dataloader.default_collate([b[1] for b in batch])
@@ -107,7 +104,7 @@ def main():
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,  # ?
+        pin_memory=True,  
         shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
@@ -117,7 +114,7 @@ def main():
         dataset=test_dataset,
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,  # ?
+        pin_memory=True,  
         shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
@@ -131,7 +128,7 @@ def main():
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
 
-        mAP = coco_eval_model(model)
+        mAP = coco_eval_model(model, device)
         writer.add_scalar('mAP', mAP, epoch)
         writer.flush()
 

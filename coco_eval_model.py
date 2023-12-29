@@ -11,7 +11,7 @@ import model
 import torch
 
 
-def coco_eval_model(model):
+def coco_eval_model(model, device):
 
     coco_data = coco_dataset.CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "val2017"),
@@ -64,7 +64,7 @@ def coco_eval_model(model):
 
 if __name__ == '__main__':
 
-    save_path = "save_model.pth"
+    save_path = "ff0.pth"
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda":
@@ -74,4 +74,4 @@ if __name__ == '__main__':
     else:
         model = model.openpose()
 
-    coco_eval_model(model)
+    coco_eval_model(model, device)
