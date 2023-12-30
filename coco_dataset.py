@@ -47,7 +47,7 @@ class CocoKeypoints(data.Dataset):
         target = self._load_target(id)
         anns = (image.copy(), target)
 
-        target = [x for x in target if x["num_keypoints"] > 0] # remove non-keypoint-annotated targets
+        target = [x for x in target if x["num_keypoints"] > 0]  # remove non-keypoint-annotated targets
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
@@ -67,7 +67,8 @@ class CocoKeypoints(data.Dataset):
 
         ts = transforms.ToTensor()({'image': image, 'pafs': pafs, 'heatmaps': heatmaps})
 
-        return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns, id
+        # return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns, id
+        return ts['image'], ts['pafs'], ts['heatmaps'], id
 
     def __len__(self) -> int:
         return len(self.ids)
