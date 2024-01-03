@@ -12,11 +12,11 @@ class backbone(nn.Module):
         self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:33])
         self.remaining = nn.Sequential(
             nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.PReLU(num_parameters=256),
+            nn.BatchNorm2d(256, momentum=0.01),
+            nn.ReLU(),
             nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.PReLU(num_parameters=128),
+            nn.BatchNorm2d(128, momentum=0.01),
+            nn.ReLU(),
         )
 
     def forward(self, x):
@@ -31,11 +31,11 @@ class conv_block(nn.Module):
         super(conv_block, self).__init__()
 
         self.conv = nn.Conv2d(in_channels, out_channels, **kwargs)
-        self.batchnorm = nn.BatchNorm2d(out_channels)
+        self.batchnorm = nn.BatchNorm2d(out_channels, momentum=0.01)
         self.use_relu = use_relu
 
         if self.use_relu:
-            self.relu = nn.PReLU(num_parameters=out_channels)
+            self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.batchnorm(self.conv(x))
@@ -124,17 +124,17 @@ class openpose(nn.Module):
 
         self.backbone = backbone()
 
-        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 34])
-        self.paf1 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
-        self.paf2 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
-        self.paf3 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
+        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 38])
+        self.paf1 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
+        self.paf2 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
+        # self.paf3 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
 
-        self.htmp0 = inner_block(in_channels=162, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 19])
-        self.htmp1 = inner_block(in_channels=181, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
+        self.htmp0 = inner_block(in_channels=166, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 19])
+        # self.htmp1 = inner_block(in_channels=181, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
 
     def forward(self, x):
-        save_for_loss_pafs = []
-        save_for_loss_htmps = []
+        # save_for_loss_pafs = []
+        # save_for_loss_htmps = []
 
         # backbone
         x = self.backbone(x)
@@ -142,36 +142,38 @@ class openpose(nn.Module):
 
         # stage 0
         x = self.paf0(x)
-        save_for_loss_pafs.append(x)
+        # save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 1
         x = self.paf1(x)
-        save_for_loss_pafs.append(x)
+        # save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 2
         x = self.paf2(x)
-        save_for_loss_pafs.append(x)
-        x = torch.cat([F, x], dim=1)
-
-        # stage 3
-        x = self.paf3(x)
-        save_for_loss_pafs.append(x)
+        # save_for_loss_pafs.append(x)
         PAFS = x
         x = torch.cat([F, x], dim=1)
 
+        # # stage 3
+        # x = self.paf3(x)
+        # save_for_loss_pafs.append(x)
+        # PAFS = x
+        # x = torch.cat([F, x], dim=1)
+
         # stage 4
         x = self.htmp0(x)
-        save_for_loss_htmps.append(x)
-        x = torch.cat([F, PAFS, x], dim=1)
-
-        # stage 5
-        x = self.htmp1(x)
-        save_for_loss_htmps.append(x)
+        # save_for_loss_htmps.append(x)
         HEATMAPS = x
+        # x = torch.cat([F, PAFS, x], dim=1)
 
-        return PAFS, HEATMAPS, save_for_loss_pafs, save_for_loss_htmps
+        # # stage 5
+        # x = self.htmp1(x)
+        # save_for_loss_htmps.append(x)
+        # HEATMAPS = x
+
+        return PAFS, HEATMAPS#, save_for_loss_pafs, save_for_loss_htmps
 
 
 if __name__ == "__main__":
