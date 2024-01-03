@@ -1,65 +1,64 @@
 import torch
 from tqdm import tqdm
+import os
 import pathlib
-from model import openpose
-from loss import PoseLoss
+import model as mdl
+import torch.nn as nn
 from torch.utils.data import DataLoader
+import transforms as mytf
 from coco_dataset import CocoKeypoints
 from torchvision.transforms import v2
-import transforms as mytf
-from torch.utils.tensorboard import SummaryWriter
-import torch.nn as nn
 from coco_eval_model import coco_eval_model
-import os
+from torch.utils.tensorboard import SummaryWriter
 
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 16
 EPOCHS = 200
 NUM_WORKERS = 10
-MODEL_NAME = "ff0"
+MODEL_NAME = "fff#"
 LOG_STEP = 1000
 
-def train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer):
+
+def train_fn(dataloader, model, optimizer, loss_fcn, device, epoch, writer):
     model.train()
 
-    loop = tqdm(train_loader, leave=True)
+    loop = tqdm(dataloader, leave=True)
     run_loss = 0.0
     for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
         image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
         pred_pafs, pred_heatmaps = model(image)
 
-        loss = (loss_fcn(pred_pafs, targ_pafs) + loss_fcn(pred_heatmaps, targ_heatmaps)) / BATCH_SIZE
+        loss = (loss_fcn(pred_pafs, targ_pafs) + loss_fcn(pred_heatmaps, targ_heatmaps))  #/ BATCH_SIZE
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
         run_loss += loss.item()
         if i % LOG_STEP == LOG_STEP - 1:
-            avg_loss = run_loss / LOG_STEP
-            writer.add_scalar('train_loss', avg_loss, epoch * len(train_loader) + i)
+            writer.add_scalar('train_loss', run_loss / LOG_STEP, epoch * len(dataloader) + i)
             run_loss = 0.0
 
-        loop.set_postfix(epoch=epoch, loss=loss.item())  # update progress bar
+        loop.set_postfix(epoch=epoch, loss=loss.item())  
     writer.flush()
 
 
-def test_fn(test_loader, model, loss_fcn, device, epoch, writer):
+@torch.no_grad()
+def test_fn(dataloader, model, loss_fcn, device, epoch, writer):
     model.eval()
 
-    loop = tqdm(test_loader, leave=True)
+    loop = tqdm(dataloader, leave=True)
     run_vloss = 0.0
-    with torch.no_grad():
-        for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
-            image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
+    for i, (image, targ_pafs, targ_heatmaps) in enumerate(loop):
+        image, targ_pafs, targ_heatmaps = image.to(device), targ_pafs.to(device), targ_heatmaps.to(device)
 
-            pred_pafs, pred_heatmaps = model(image)
+        pred_pafs, pred_heatmaps = model(image)
 
-            vloss = (loss_fcn(pred_pafs, targ_pafs) + loss_fcn(pred_heatmaps, targ_heatmaps)) / BATCH_SIZE
-            run_vloss += vloss.item()
+        vloss = (loss_fcn(pred_pafs, targ_pafs) + loss_fcn(pred_heatmaps, targ_heatmaps))  #/ BATCH_SIZE
+        run_vloss += vloss.item()
 
-    vloss = run_vloss / len(test_loader)
+    vloss = run_vloss / len(dataloader)
     writer.add_scalar('val_loss', vloss, epoch)
     writer.flush()
 
@@ -72,17 +71,17 @@ def collate_fn(batch):
 
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    if device == "cuda":
-        model = torch.nn.DataParallel(openpose()).cuda()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        model = mdl.openpose().to(device)
 
         # freeze vgg19 layers
-        for param in model.module.backbone.ten_first_layers.parameters():
+        for param in model.backbone.ten_first_layers.parameters():
             param.requires_grad = False
     else:
-        model = openpose()
+        model = mdl.openpose()
 
-    loss_fcn = nn.MSELoss(reduction="sum")
+    loss_fcn = nn.MSELoss(reduction="mean")
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
     inp_size = 368
@@ -100,11 +99,16 @@ def main():
         transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(inp_size),
                               mytf.Pad(inp_size)]))
 
+    mAP_dataset = CocoKeypoints(
+        root=str(pathlib.Path("../coco") / "images" / "val2017"),
+        annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
+        transform=None)
+
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        pin_memory=True,  
+        pin_memory=True,
         shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
@@ -114,21 +118,20 @@ def main():
         dataset=test_dataset,
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        pin_memory=True,  
+        pin_memory=True,
         shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
     )
 
-    dir = os.path.join("runs", MODEL_NAME)
-    writer = SummaryWriter(dir)
+    writer = SummaryWriter(os.path.join("runs", MODEL_NAME))
 
-    best_mAP = float('inf')
+    best_mAP = 0
     for epoch in range(EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
 
-        mAP = coco_eval_model(model, device)
+        mAP = coco_eval_model(mAP_dataset, model, device)
         writer.add_scalar('mAP', mAP, epoch)
         writer.flush()
 
