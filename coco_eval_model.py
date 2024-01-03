@@ -48,8 +48,6 @@ def coco_eval_model(dataset, model, device):
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
-    # return Average Precision
-    print(cocoEval.stats[0])
     return cocoEval.stats[0]
 
 
