@@ -12,10 +12,10 @@ class backbone(nn.Module):
         self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:33])
         self.remaining = nn.Sequential(
             nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256, momentum=0.01),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128, momentum=0.01),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
@@ -31,7 +31,7 @@ class conv_block(nn.Module):
         super(conv_block, self).__init__()
 
         self.conv = nn.Conv2d(in_channels, out_channels, **kwargs)
-        self.batchnorm = nn.BatchNorm2d(out_channels, momentum=0.01)
+        self.batchnorm = nn.BatchNorm2d(out_channels)
         self.use_relu = use_relu
 
         if self.use_relu:
