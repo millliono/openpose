@@ -40,7 +40,7 @@ def train_fn(dataloader, model, optimizer, loss_fcn, device, epoch, writer):
             writer.add_scalar('train_loss', run_loss / LOG_STEP, epoch * len(dataloader) + i)
             run_loss = 0.0
 
-        loop.set_postfix(epoch=epoch, loss=loss.item())  
+        loop.set_postfix(epoch=epoch, loss=loss.item())
     writer.flush()
 
 
@@ -71,18 +71,15 @@ def collate_fn(batch):
 
 
 def main():
+    writer = SummaryWriter(os.path.join("runs", MODEL_NAME))
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if torch.cuda.is_available():
         model = mdl.openpose().to(device)
-
-        # freeze vgg19 layers
-        for param in model.backbone.ten_first_layers.parameters():
-            param.requires_grad = False
     else:
         model = mdl.openpose()
 
     loss_fcn = nn.MSELoss(reduction="mean")
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
     inp_size = 368
     train_dataset = CocoKeypoints(
@@ -124,10 +121,29 @@ def main():
         collate_fn=collate_fn,
     )
 
-    writer = SummaryWriter(os.path.join("runs", MODEL_NAME))
+    # freeze vgg19 layers-------------
+    for param in model.backbone.ten_first_layers.parameters():
+        param.requires_grad = False
+
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                 lr=LEARNING_RATE,
+                                 weight_decay=WEIGHT_DECAY)
+
+    for epoch in range(5):
+        train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
+        test_fn(test_loader, model, loss_fcn, device, epoch, writer)
+    #------------------
+
+    # UN-freeze vgg19 layers-------------
+    for param in model.backbone.ten_first_layers.parameters():
+        param.requires_grad = True
+
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                 lr=LEARNING_RATE,
+                                 weight_decay=WEIGHT_DECAY)
 
     best_mAP = 0
-    for epoch in range(EPOCHS):
+    for epoch in range(5, EPOCHS):
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
 
