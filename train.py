@@ -74,10 +74,7 @@ def main():
     writer = SummaryWriter(os.path.join("runs", MODEL_NAME))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if torch.cuda.is_available():
-        model = mdl.openpose().to(device)
-    else:
-        model = mdl.openpose()
+    model = nn.DataParallel(mdl.openpose()).to(device)
 
     loss_fcn = nn.MSELoss(reduction="mean")
 
@@ -122,7 +119,7 @@ def main():
     )
 
     # freeze vgg19 layers-------------
-    for param in model.backbone.ten_first_layers.parameters():
+    for param in model.module.backbone.ten_first_layers.parameters():
         param.requires_grad = False
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
@@ -135,7 +132,7 @@ def main():
     #------------------
 
     # UN-freeze vgg19 layers-------------
-    for param in model.backbone.ten_first_layers.parameters():
+    for param in model.module.backbone.ten_first_layers.parameters():
         param.requires_grad = True
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
