@@ -51,14 +51,16 @@ class CocoKeypoints(data.Dataset):
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)
-        coords = keypoints[:, :, :2].reshape(-1, 17, 2)
+        coords = keypoints[:, :, :2].reshape(-1, 17, 2).astype(float)
+        coords += 0.5  # floating point coordinates
         vis = keypoints[:, :, 2].reshape(-1, 17, 1)
 
         if self.transform:
             tf = self.transform({'image': image, 'kpt_coords': coords, 'kpt_vis': vis})
             image, coords, vis = tf['image'], tf["kpt_coords"], tf["kpt_vis"]
 
-        keypoints = np.concatenate((transforms.resize_keypoints(coords, stride=8), vis), axis=2).tolist()
+        coords = (coords / 8) - 0.5 # pixel coordinates
+        keypoints = np.concatenate((coords, vis), axis=2).tolist()
         keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
         targ_size = np.array(image.size) // 8

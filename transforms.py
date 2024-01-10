@@ -8,32 +8,27 @@ class Resize():
     """Rescale the image in a sample to a given size.
 
     Args:
-        output_size (tuple or int): Desired output size. If tuple, output is
-            matched to output_size. If int, larger of image edges is matched
+        output_size (int): Desired output size. Longer edge is matched
             to output_size keeping aspect ratio the same.
     """
 
     def __init__(self, output_size):
-        assert isinstance(output_size, (int, tuple))
         self.output_size = output_size
 
     def __call__(self, sample):
         image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
         w, h = image.size
 
-        if isinstance(self.output_size, int):
-            if h > w:
-                new_w, new_h = self.output_size * w / h, self.output_size
-            else:
-                new_w, new_h = self.output_size, self.output_size * h / w
+        if h > w:
+            new_w, new_h = self.output_size * w / h, self.output_size
         else:
-            new_w, new_h = self.output_size
+            new_w, new_h = self.output_size, self.output_size * h / w
 
         new_w, new_h = int(new_w), int(new_h)
 
         image = F.resize(image, (new_h, new_w))
 
-        keypoints = ((keypoints + [0.5, 0.5]) * [new_w / w, new_h / h]) - [0.5, 0.5]
+        keypoints = keypoints * [new_w / w, new_h / h]
         return {'image': image, 'kpt_coords': keypoints, "kpt_vis": vis}
 
 
@@ -73,20 +68,14 @@ class RandomCrop():
 
 
 class Pad():
-    """Pad the image in a sample to a given size.
+    """Pad the image in a sample to a given size. Makes square image.
 
     Args:
-        output_size (tuple or int): Desired output size. If int, square image
-            is made.
+        output_size (int): Desired output size. 
     """
 
     def __init__(self, output_size):
-        assert isinstance(output_size, (int, tuple))
-        if isinstance(output_size, int):
-            self.output_size = (output_size, output_size)
-        else:
-            assert len(output_size) == 2
-            self.output_size = output_size
+        self.output_size = (output_size, output_size)
 
     def __call__(self, sample):
         image, keypoints, vis = sample['image'], sample['kpt_coords'], sample['kpt_vis']
@@ -96,10 +85,10 @@ class Pad():
         w_pad = new_w - w
         h_pad = new_h - h
 
-        top = 0
-        bottom = h_pad
-        left = 0
-        right = w_pad
+        top = h_pad // 2
+        bottom = h_pad - top
+        left = w_pad // 2
+        right = w_pad - left
 
         image = F.pad(image, [left, top, right, bottom])
 
@@ -112,7 +101,7 @@ class RandomRotation():
     """Rotate the image in a sample by a random angle.
 
     Args:
-        degrees (sequence or float or int): Range of degrees to select from.
+        degrees (int): Range of degrees to select from.
             If degrees is a number, the range of degrees will be (-degrees, degrees).
     """
 
@@ -131,9 +120,9 @@ class RandomRotation():
         rot_mat = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
 
         for i in range(len(keypoints)):
-            keypoints[i] = (keypoints[i] + [0.5, 0.5]) - center
+            keypoints[i] -= center
             keypoints[i] = (rot_mat @ keypoints[i].T).T
-            keypoints[i] = keypoints[i] + center - [0.5, 0.5]
+            keypoints[i] += center
 
         return {'image': image, 'kpt_coords': keypoints, 'kpt_vis': vis}
 
@@ -155,7 +144,3 @@ class ToTensor(object):
                 torch.tensor(np.array(sample['heatmaps']), dtype=torch.float)
         }
 
-
-def resize_keypoints(kpt_coords, stride=8):
-    resized = ((kpt_coords + [0.5, 0.5]) / stride) - [0.5, 0.5]
-    return resized

@@ -32,36 +32,27 @@ def get_heatmaps(keypoints, size, visibility):
 
 
 def person_paf(person, limb, size, visibility):
-    part1_vis = person[limb[0]][2]
-    part2_vis = person[limb[1]][2]
-    
-    if (part1_vis and part2_vis) not in visibility:
-        return (0, 0), np.full((size[1], size[0]), False)
-    else:
-        part1 = np.array([person[limb[0]][0], person[limb[0]][1]])
-        part2 = np.array([person[limb[1]][0], person[limb[1]][1]])
+    p1_vis = person[limb[0]][2]
+    p2_vis = person[limb[1]][2]
 
-        v = part2 - part1
-        v_magn = np.sqrt(v[0]**2 + v[1]**2) + 1e-5
-        v_norm = v / v_magn
-        v_norm_orth = np.array([v_norm[1], -v_norm[0]])
+    if (p1_vis and p2_vis) not in visibility:
+        rep = np.zeros((size[1], size[0]))
+        return rep, rep, rep
 
-        px, py = np.meshgrid(np.arange(size[0]), np.arange(size[1]))
+    p1 = np.array([person[limb[0]][0], person[limb[0]][1]])
+    p2 = np.array([person[limb[1]][0], person[limb[1]][1]])
 
-        xp_x = px.flatten() - part1[0]
-        xp_y = py.flatten() - part1[1]
-        vec_xp = np.array([xp_x, xp_y])
+    v = p2 - p1
+    v_norm = v / (np.sqrt(v[0]**2 + v[1]**2) + 1e-5)
 
-        dot1 = np.dot(v_norm, vec_xp).reshape(size[1], size[0])
-        cond1 = np.logical_and(dot1 >= -(0.2 * v_magn), dot1 <= 1.2 * v_magn)
+    locs = np.zeros((size[1], size[0]))
+    rr, cc, val = weighted_line(p1[1], p1[0], p2[1], p2[0], w=.1, rmin=0, rmax_x=size[0], rmax_y=size[1])
+    locs[rr, cc] = 1
 
-        s_thresh = 1
-        dot2 = np.abs(np.dot(v_norm_orth, vec_xp).reshape(size[1], size[0]))
-        cond2 = dot2 <= s_thresh
+    pafx = np.where(locs == 1, v_norm[0], 0)
+    pafy = np.where(locs == 1, v_norm[1], 0)
 
-        location = np.logical_and(cond1, cond2)
-
-        return v_norm, location
+    return pafx, pafy, locs
 
 
 def get_pafs(keypoints, size, visibility):
@@ -69,30 +60,15 @@ def get_pafs(keypoints, size, visibility):
     paf_locs = []
     for limb in common.connect_skeleton:
         res = [person_paf(x, limb, size, visibility) for x in keypoints]
-        vectors, locations = zip(*res)
+        pafx, pafy, locs = zip(*res)
 
-        listx = []
-        for v, loc in zip(vectors, locations):
-            arrx = np.zeros((size[1], size[0]))
-            arrx[loc] = v[0]
-            listx.append(arrx)
+        locs = np.sum(locs, axis=0)
+        pafx = np.sum(pafx, axis=0)
+        pafy = np.sum(pafy, axis=0)
 
-        listy = []
-        for v, loc in zip(vectors, locations):
-            arry = np.zeros((size[1], size[0]))
-            arry[loc] = v[1]
-            listy.append(arry)
-
-        num = np.sum(locations, axis=0)
-        num[num == 0] = 1
-        locations = np.maximum.reduce(locations)
-
-        paf_x = np.sum(listx, axis=0) / num
-        paf_y = np.sum(listy, axis=0) / num
-
-        pafs.append(paf_x)
-        pafs.append(paf_y)
-        paf_locs.append(locations)
+        paf_locs.append(locs)
+        pafs.append(pafx)
+        pafs.append(pafy)
     return pafs, paf_locs
 
 
@@ -122,3 +98,47 @@ def add_neck(keypoints, visibility):
 
         keypoints[i].append(neck.tolist())
     return keypoints
+
+
+def trapez(y, y0, w):
+    return np.clip(np.minimum(y + 1 + w / 2 - y0, -y + 1 + w / 2 + y0), 0, 1)
+
+
+def weighted_line(r0, c0, r1, c1, w, rmin, rmax_x, rmax_y):
+    # The algorithm below works fine if c1 >= c0 and c1-c0 >= abs(r1-r0).
+    # If either of these cases are violated, do some switches.
+    if abs(c1 - c0) < abs(r1 - r0):
+        # Switch x and y, and switch again when returning.
+        xx, yy, val = weighted_line(c0, r0, c1, r1, w, rmin=rmin, rmax_x=rmax_y, rmax_y=rmax_x)
+        return (yy, xx, val)
+
+    # At this point we know that the distance in columns (x) is greater
+    # than that in rows (y). Possibly one more switch if c0 > c1.
+    if c0 > c1:
+        return weighted_line(r1, c1, r0, c0, w, rmin=rmin, rmax_x=rmax_x, rmax_y=rmax_y)
+
+    # The following is now always < 1 in abs
+    slope = (r1 - r0) / (c1 - c0)
+
+    # Adjust weight by the slope
+    w *= np.sqrt(1 + np.abs(slope)) / 2
+
+    # We write y as a function of x, because the slope is always <= 1
+    # (in absolute value)
+    x = np.arange(c0, c1 + 1, dtype=float)
+    y = x * slope + (c1 * r0 - c0 * r1) / (c1 - c0)
+
+    # Now instead of 2 values for y, we have 2*np.ceil(w/2).
+    # All values are 1 except the upmost and bottommost.
+    thickness = np.ceil(w / 2)
+    yy = (np.floor(y).reshape(-1, 1) + np.arange(-thickness - 1, thickness + 2).reshape(1, -1))
+    xx = np.repeat(x, yy.shape[1])
+    vals = trapez(yy, y.reshape(-1, 1), w).flatten()
+
+    yy = yy.flatten()
+
+    # Exclude useless parts and those outside of the interval
+    # to avoid parts outside of the picture
+    mask = np.logical_and.reduce((yy >= rmin, yy < rmax_y, xx >= rmin, xx < rmax_x, vals > 0))
+
+    return (yy[mask].astype(int), xx[mask].astype(int), vals[mask])
