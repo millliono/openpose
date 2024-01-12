@@ -5,3 +5,4 @@ predictions.csv
 runs/
 predictions.json
 notes.md
+.vscode/

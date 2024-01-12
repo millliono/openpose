@@ -46,7 +46,7 @@ def person_paf(person, limb, size, visibility):
     v_norm = v / (np.sqrt(v[0]**2 + v[1]**2) + 1e-5)
 
     locs = np.zeros((size[1], size[0]))
-    rr, cc, val = weighted_line(p1[1], p1[0], p2[1], p2[0], w=.1, rmin=0, rmax_x=size[0], rmax_y=size[1])
+    rr, cc, val = weighted_line(p1[1], p1[0], p2[1], p2[0], w=1, rmin=0, rmax_x=size[0], rmax_y=size[1], thresh=0.15)
     locs[rr, cc] = 1
 
     pafx = np.where(locs == 1, v_norm[0], 0)
@@ -104,21 +104,21 @@ def trapez(y, y0, w):
     return np.clip(np.minimum(y + 1 + w / 2 - y0, -y + 1 + w / 2 + y0), 0, 1)
 
 
-def weighted_line(r0, c0, r1, c1, w, rmin, rmax_x, rmax_y):
+def weighted_line(r0, c0, r1, c1, w, rmin, rmax_x, rmax_y, thresh):
     # The algorithm below works fine if c1 >= c0 and c1-c0 >= abs(r1-r0).
     # If either of these cases are violated, do some switches.
     if abs(c1 - c0) < abs(r1 - r0):
         # Switch x and y, and switch again when returning.
-        xx, yy, val = weighted_line(c0, r0, c1, r1, w, rmin=rmin, rmax_x=rmax_y, rmax_y=rmax_x)
+        xx, yy, val = weighted_line(c0, r0, c1, r1, w, rmin=rmin, rmax_x=rmax_y, rmax_y=rmax_x, thresh=thresh)
         return (yy, xx, val)
 
     # At this point we know that the distance in columns (x) is greater
     # than that in rows (y). Possibly one more switch if c0 > c1.
     if c0 > c1:
-        return weighted_line(r1, c1, r0, c0, w, rmin=rmin, rmax_x=rmax_x, rmax_y=rmax_y)
+        return weighted_line(r1, c1, r0, c0, w, rmin=rmin, rmax_x=rmax_x, rmax_y=rmax_y, thresh=thresh)
 
     # The following is now always < 1 in abs
-    slope = (r1 - r0) / (c1 - c0)
+    slope = (r1 - r0) / ((c1 - c0) + 1e-5)
 
     # Adjust weight by the slope
     w *= np.sqrt(1 + np.abs(slope)) / 2
@@ -126,7 +126,7 @@ def weighted_line(r0, c0, r1, c1, w, rmin, rmax_x, rmax_y):
     # We write y as a function of x, because the slope is always <= 1
     # (in absolute value)
     x = np.arange(c0, c1 + 1, dtype=float)
-    y = x * slope + (c1 * r0 - c0 * r1) / (c1 - c0)
+    y = x * slope + (c1 * r0 - c0 * r1) / ((c1 - c0) + 1e-5)
 
     # Now instead of 2 values for y, we have 2*np.ceil(w/2).
     # All values are 1 except the upmost and bottommost.
@@ -139,6 +139,6 @@ def weighted_line(r0, c0, r1, c1, w, rmin, rmax_x, rmax_y):
 
     # Exclude useless parts and those outside of the interval
     # to avoid parts outside of the picture
-    mask = np.logical_and.reduce((yy >= rmin, yy < rmax_y, xx >= rmin, xx < rmax_x, vals > 0))
+    mask = np.logical_and.reduce((yy >= rmin, yy < rmax_y, xx >= rmin, xx < rmax_x, vals > thresh))
 
     return (yy[mask].astype(int), xx[mask].astype(int), vals[mask])
