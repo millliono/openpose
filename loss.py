@@ -3,9 +3,10 @@ import torch.nn as nn
 
 class PoseLoss(nn.Module):
 
-    def __init__(self):
+    def __init__(self, batch_size, reduction):
         super().__init__()
-        self.mse = nn.MSELoss()
+        self.mse = nn.MSELoss(reduction=reduction)
+        self.batch_size = batch_size
 
     def forward(self, save_for_loss_pafs, save_for_loss_htmps, paf_target, htmp_target):
         total_loss = 0
@@ -20,4 +21,4 @@ class PoseLoss(nn.Module):
             # htmp_target = htmp_target * mask_out
             total_loss += self.mse(x, htmp_target)
 
-        return total_loss
+        return total_loss / self.batch_size

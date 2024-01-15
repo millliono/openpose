@@ -19,7 +19,7 @@ def coco_eval_model(dataset, model, device):
         h, w = inp.size()[-2:]
         inp_size = (w, h)
 
-        pred_pafs, pred_heatmaps = model(inp.unsqueeze_(0).to(device))
+        pred_pafs, pred_heatmaps, _, _ = model(inp.unsqueeze_(0).to(device))
 
         humans = post.post_process(pred_heatmaps.squeeze_(0).cpu(), pred_pafs.squeeze_(0).cpu(), inp_size)
 

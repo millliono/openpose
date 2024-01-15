@@ -99,12 +99,7 @@ class inner_block(nn.Module):
         self.conv_triplet4 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
         self.conv_triplet5 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
         self.conv6 = conv_block(in_channels=conv6[0], out_channels=conv6[1], use_relu=True, kernel_size=1)
-        self.conv7 = conv_block(
-            in_channels=conv7[0],
-            out_channels=conv7[1],  # (the number of affinity vectors)
-            use_relu=False,
-            kernel_size=1,
-        )
+        self.conv7 = nn.Conv2d(in_channels=conv7[0], out_channels=conv7[1], kernel_size=1)
 
     def forward(self, x):
         x = self.conv_triplet1(x)
@@ -127,14 +122,14 @@ class openpose(nn.Module):
         self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 38])
         self.paf1 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
         self.paf2 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
-        # self.paf3 = inner_block(in_channels=162, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 34])
+        self.paf3 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
 
         self.htmp0 = inner_block(in_channels=166, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 19])
-        # self.htmp1 = inner_block(in_channels=181, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
+        self.htmp1 = inner_block(in_channels=185, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
 
     def forward(self, x):
-        # save_for_loss_pafs = []
-        # save_for_loss_htmps = []
+        save_for_loss_pafs = []
+        save_for_loss_htmps = []
 
         # backbone
         x = self.backbone(x)
@@ -142,38 +137,36 @@ class openpose(nn.Module):
 
         # stage 0
         x = self.paf0(x)
-        # save_for_loss_pafs.append(x)
+        save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 1
         x = self.paf1(x)
-        # save_for_loss_pafs.append(x)
+        save_for_loss_pafs.append(x)
         x = torch.cat([F, x], dim=1)
 
         # stage 2
         x = self.paf2(x)
-        # save_for_loss_pafs.append(x)
+        save_for_loss_pafs.append(x)
+        x = torch.cat([F, x], dim=1)
+
+        # stage 3
+        x = self.paf3(x)
+        save_for_loss_pafs.append(x)
         PAFS = x
         x = torch.cat([F, x], dim=1)
 
-        # # stage 3
-        # x = self.paf3(x)
-        # save_for_loss_pafs.append(x)
-        # PAFS = x
-        # x = torch.cat([F, x], dim=1)
-
         # stage 4
         x = self.htmp0(x)
-        # save_for_loss_htmps.append(x)
+        save_for_loss_htmps.append(x)
+        x = torch.cat([F, PAFS, x], dim=1)
+
+        # stage 5
+        x = self.htmp1(x)
+        save_for_loss_htmps.append(x)
         HEATMAPS = x
-        # x = torch.cat([F, PAFS, x], dim=1)
 
-        # # stage 5
-        # x = self.htmp1(x)
-        # save_for_loss_htmps.append(x)
-        # HEATMAPS = x
-
-        return PAFS, HEATMAPS#, save_for_loss_pafs, save_for_loss_htmps
+        return PAFS, HEATMAPS, save_for_loss_pafs, save_for_loss_htmps
 
 
 if __name__ == "__main__":
