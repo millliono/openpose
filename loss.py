@@ -12,13 +12,9 @@ class PoseLoss(nn.Module):
         total_loss = 0
 
         for x in save_for_loss_pafs:
-            # paf = paf * mask_out
-            # paf_target = paf_target * mask_out
             total_loss += self.mse(x, paf_target)
 
         for x in save_for_loss_htmps:
-            # htmp = htmp * mask_out
-            # htmp_target = htmp_target * mask_out
             total_loss += self.mse(x, htmp_target)
 
         return total_loss / self.batch_size
