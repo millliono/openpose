@@ -14,7 +14,7 @@ def show_coco(image, target, coco, draw_bbox):
 def blend(conf_maps, image, rows, cols, figsize):
     conf_maps = [Image.fromarray((x * 255)).convert("L") for x in conf_maps]
     conf_maps = [ImageOps.colorize(x, black="blue", white="orange") for x in conf_maps]
-    conf_maps = [x.resize(image.size, resample=Image.NEAREST) for x in conf_maps]
+    conf_maps = [x.resize(image.size, resample=Image.BILINEAR) for x in conf_maps]
     blended = [Image.blend(x, image, 0.5) for x in conf_maps]
     plot_grid(blended, rows, cols, figsize)
 

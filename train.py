@@ -79,20 +79,26 @@ def main():
 
     loss_fcn = PoseLoss(BATCH_SIZE, reduction='sum')
 
-    inp_size = 368
     train_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "train2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
-        transform=v2.Compose([mytf.RandomCrop(0.8),
-                              mytf.Resize(inp_size),
-                              mytf.Pad(inp_size),
-                              mytf.RandomRotation(40)]))
+        transform=v2.Compose([
+            v2.RandomApply([mytf.Hflip()], 0.5),
+            mytf.RandomResize((0.5, 1.1)),
+            mytf.RandomCrop(368),
+            mytf.Pad(368),
+            mytf.RandomRotation(40),
+        ]))
 
     test_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "val2017"),
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
-        transform=v2.Compose([mytf.RandomCrop(0.8), mytf.Resize(inp_size),
-                              mytf.Pad(inp_size)]))
+        transform=v2.Compose([
+            v2.RandomApply([mytf.Hflip()], 0.5),
+            mytf.RandomResize((0.5, 1.1)),
+            mytf.RandomCrop(368),
+            mytf.Pad(368),
+        ]))
 
     mAP_dataset = CocoKeypoints(
         root=str(pathlib.Path("../coco") / "images" / "val2017"),
