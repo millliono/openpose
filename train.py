@@ -74,8 +74,8 @@ def collate_fn(batch):
 def main():
     writer = SummaryWriter(os.path.join("runs", MODEL_NAME))
 
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    model = nn.DataParallel(mdl.openpose(), device_ids=[1, 2, 3]).to(device)
+    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    model = nn.DataParallel(mdl.openpose(), device_ids=[2, 3]).to(device)
 
     loss_fcn = PoseLoss(BATCH_SIZE, reduction='sum')
 
