@@ -138,7 +138,7 @@ def main():
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
 
-        if epoch >= 20:
+        if epoch >= 10:
             mAP = coco_eval_model(mAP_dataset, model, device)
             writer.add_scalar('mAP', mAP, epoch)
             writer.flush()
