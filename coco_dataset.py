@@ -59,7 +59,7 @@ class CocoKeypoints(data.Dataset):
             tf = self.transform({'image': image, 'kpt_coords': coords, 'kpt_vis': vis})
             image, coords, vis = tf['image'], tf["kpt_coords"], tf["kpt_vis"]
 
-        coords = (coords / 8) - 0.5 # pixel coordinates
+        coords = (coords / 8) - 0.5  # pixel coordinates
         keypoints = np.concatenate((coords, vis), axis=2).tolist()
         keypoints = dataset_utils.add_neck(keypoints, visibility=[2])
 
@@ -69,8 +69,7 @@ class CocoKeypoints(data.Dataset):
 
         ts = transforms.ToTensor()({'image': image, 'pafs': pafs, 'heatmaps': heatmaps})
 
-        # return ts['image'], ts['pafs'], ts['heatmaps'], paf_locs, anns, id
-        return ts['image'], ts['pafs'], ts['heatmaps'], id
+        return ts['image'], ts['pafs'], ts['heatmaps'], id, paf_locs, anns
 
     def __len__(self) -> int:
         return len(self.ids)

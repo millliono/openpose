@@ -13,7 +13,7 @@ mAP_data = coco_dataset.CocoKeypoints(
 
 my_list = []
 for i in tqdm(range(len(mAP_data.ids))):
-    inp, pafs, heatmaps, id = mAP_data[i]
+    inp, pafs, heatmaps, id, _, _ = mAP_data[i]
     h, w = inp.size()[-2:]
     inp_size = (w, h)
 

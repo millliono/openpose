@@ -15,7 +15,7 @@ def coco_eval_model(dataset, model, device):
 
     my_list = []
     for i in tqdm(range(len(dataset.ids))):
-        inp, _, _, id = dataset[i]
+        inp, _, _, id, _, _ = dataset[i]
         h, w = inp.size()[-2:]
         inp_size = (w, h)
 
