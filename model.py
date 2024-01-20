@@ -119,53 +119,30 @@ class openpose(nn.Module):
 
         self.backbone = backbone()
 
-        self.paf0 = inner_block(in_channels=128, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 38])
+        self.paf0 = inner_block(in_channels=128, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
         self.paf1 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
-        self.paf2 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
-        self.paf3 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 38])
 
-        self.htmp0 = inner_block(in_channels=166, out_channels_indiv=96, conv6=[288, 256], conv7=[256, 19])
-        self.htmp1 = inner_block(in_channels=185, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
+        self.htmp0 = inner_block(in_channels=166, out_channels_indiv=128, conv6=[384, 512], conv7=[512, 19])
 
     def forward(self, x):
         save_for_loss_pafs = []
         save_for_loss_htmps = []
 
         # backbone
-        x = self.backbone(x)
-        F = x
+        F = self.backbone(x)
 
         # stage 0
-        x = self.paf0(x)
+        x = self.paf0(F)
         save_for_loss_pafs.append(x)
-        x = torch.cat([F, x], dim=1)
 
         # stage 1
-        x = self.paf1(x)
-        save_for_loss_pafs.append(x)
-        x = torch.cat([F, x], dim=1)
+        PAFS = self.paf1(torch.cat([F, x], dim=1))
+        save_for_loss_pafs.append(PAFS)
 
         # stage 2
-        x = self.paf2(x)
-        save_for_loss_pafs.append(x)
-        x = torch.cat([F, x], dim=1)
-
-        # stage 3
-        x = self.paf3(x)
-        save_for_loss_pafs.append(x)
-        PAFS = x
-        x = torch.cat([F, x], dim=1)
-
-        # stage 4
-        x = self.htmp0(x)
-        save_for_loss_htmps.append(x)
-        x = torch.cat([F, PAFS, x], dim=1)
-
-        # stage 5
-        x = self.htmp1(x)
-        save_for_loss_htmps.append(x)
-        HEATMAPS = x
-
+        HEATMAPS = self.htmp0(torch.cat([F, PAFS], dim=1))
+        save_for_loss_htmps.append(HEATMAPS)
+        
         return PAFS, HEATMAPS, save_for_loss_pafs, save_for_loss_htmps
 
 
@@ -180,5 +157,3 @@ if __name__ == "__main__":
 
     writer.add_graph(model, dummy_input)
     writer.close()
-
-    print(model.backbone)
