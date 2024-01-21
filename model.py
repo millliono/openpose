@@ -10,14 +10,10 @@ class backbone(nn.Module):
     def __init__(self):
         super(backbone, self).__init__()
         self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:33])
-        self.remaining = nn.Sequential(
-            nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        )
+        self.remaining = nn.Sequential(nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
+                                       nn.PReLU(num_parameters=256),
+                                       nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),
+                                       nn.PReLU(num_parameters=128))
 
     def forward(self, x):
         x = self.ten_first_layers(x)
@@ -27,22 +23,14 @@ class backbone(nn.Module):
 
 class conv_block(nn.Module):
 
-    def __init__(self, in_channels, out_channels, use_relu=True, **kwargs):
+    def __init__(self, in_channels, out_channels, **kwargs):
         super(conv_block, self).__init__()
 
         self.conv = nn.Conv2d(in_channels, out_channels, **kwargs)
-        self.batchnorm = nn.BatchNorm2d(out_channels)
-        self.use_relu = use_relu
-
-        if self.use_relu:
-            self.relu = nn.ReLU()
+        self.relu = nn.PReLU(num_parameters=out_channels)
 
     def forward(self, x):
-        x = self.batchnorm(self.conv(x))
-
-        if self.use_relu:
-            x = self.relu(x)
-
+        x = self.relu(self.conv(x))
         return x
 
 
@@ -54,7 +42,6 @@ class conv_triplet(nn.Module):
         self.conv0 = conv_block(
             in_channels_0,
             out_channels=out_channels_indiv,
-            use_relu=True,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -62,7 +49,6 @@ class conv_triplet(nn.Module):
         self.conv1 = conv_block(
             in_channels=out_channels_indiv,
             out_channels=out_channels_indiv,
-            use_relu=True,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -70,7 +56,6 @@ class conv_triplet(nn.Module):
         self.conv2 = conv_block(
             in_channels=out_channels_indiv,
             out_channels=out_channels_indiv,
-            use_relu=True,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -98,7 +83,7 @@ class inner_block(nn.Module):
         self.conv_triplet3 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
         self.conv_triplet4 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
         self.conv_triplet5 = conv_triplet(in_channels_0=3 * out_channels_indiv, out_channels_indiv=out_channels_indiv)
-        self.conv6 = conv_block(in_channels=conv6[0], out_channels=conv6[1], use_relu=True, kernel_size=1)
+        self.conv6 = conv_block(in_channels=conv6[0], out_channels=conv6[1], kernel_size=1)
         self.conv7 = nn.Conv2d(in_channels=conv7[0], out_channels=conv7[1], kernel_size=1)
 
     def forward(self, x):
@@ -142,7 +127,7 @@ class openpose(nn.Module):
         # stage 2
         HEATMAPS = self.htmp0(torch.cat([F, PAFS], dim=1))
         save_for_loss_htmps.append(HEATMAPS)
-        
+
         return PAFS, HEATMAPS, save_for_loss_pafs, save_for_loss_htmps
 
 
