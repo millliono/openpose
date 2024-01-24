@@ -1,15 +1,15 @@
 import torch
 import torch.nn as nn
-from torchvision.models import vgg19_bn, VGG19_BN_Weights
+from torchvision.models import vgg19, VGG19_Weights
 
-vgg19 = vgg19_bn(weights=VGG19_BN_Weights.DEFAULT)
+vgg19 = vgg19(weights=VGG19_Weights.DEFAULT)
 
 
 class backbone(nn.Module):
 
     def __init__(self):
         super(backbone, self).__init__()
-        self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:33])
+        self.ten_first_layers = nn.Sequential(*list(vgg19.features.children())[:23])
         self.remaining = nn.Sequential(nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
                                        nn.PReLU(num_parameters=256),
                                        nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1),

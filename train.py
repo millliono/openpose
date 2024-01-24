@@ -84,7 +84,7 @@ def main():
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_train2017.json"),
         transform=v2.Compose([
             v2.RandomApply([mytf.Hflip()], 0.5),
-            mytf.RandomResize((0.5, 1.1)),
+            mytf.RandomResize((0.5, 1.2)),
             mytf.RandomCrop(368),
             mytf.Pad(368),
             mytf.RandomRotation(40),
@@ -95,7 +95,7 @@ def main():
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
         transform=v2.Compose([
             v2.RandomApply([mytf.Hflip()], 0.5),
-            mytf.RandomResize((0.5, 1.1)),
+            mytf.RandomResize((0.5, 1.2)),
             mytf.RandomCrop(368),
             mytf.Pad(368),
         ]))
@@ -132,20 +132,31 @@ def main():
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                  lr=LEARNING_RATE,
                                  weight_decay=WEIGHT_DECAY)
-
-    best_mAP = 0
-    for epoch in range(EPOCHS):
+    
+    for epoch in range(5):
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
 
-        if epoch >= 10:
-            mAP = coco_eval_model(mAP_dataset, model, device)
-            writer.add_scalar('mAP', mAP, epoch)
-            writer.flush()
+    # unfreeze vgg19 layers
+    for param in model.module.backbone.ten_first_layers.parameters():
+        param.requires_grad = True
+    
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                 lr=LEARNING_RATE,
+                                 weight_decay=WEIGHT_DECAY)
 
-            if mAP > best_mAP:
-                torch.save(model.state_dict(), MODEL_NAME + ".pth")
-                best_mAP = mAP
+    best_mAP = 0
+    for epoch in range(5, EPOCHS):
+        train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
+        test_fn(test_loader, model, loss_fcn, device, epoch, writer)
+
+        mAP = coco_eval_model(mAP_dataset, model, device)
+        writer.add_scalar('mAP', mAP, epoch)
+        writer.flush()
+
+        if mAP > best_mAP:
+            torch.save(model.state_dict(), MODEL_NAME + ".pth")
+            best_mAP = mAP
     writer.close()
 
 
