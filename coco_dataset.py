@@ -20,6 +20,7 @@ class CocoKeypoints(data.Dataset):
 
         # only retrieve images that have person keypoint annotations
         self.ids = [id for id in self.ids if self.exists_keypoint_annotation(id)]
+        self.sampler_weights = [self.get_sampler_weights(id) for id in self.ids]
 
     def _load_image(self, id: int) -> Image.Image:
         path = self.coco.loadImgs(id)[0]["file_name"]
@@ -28,10 +29,11 @@ class CocoKeypoints(data.Dataset):
     def _load_target(self, id: int) -> List[Any]:
         return self.coco.loadAnns(self.coco.getAnnIds(id))
 
-    def exists_keypoint_annotation(self, img_id):
-        target = self._load_target(img_id)
-        keypoint_anns = [True for x in target if x["num_keypoints"] > 0]
-        return True if len(keypoint_anns) > 0 else False
+    def exists_keypoint_annotation(self, id):
+        target = self._load_target(id)
+        keypoint_anns = [x["num_keypoints"] for x in target]
+        # configuring > can filter out images with 1 person and few kpts
+        return True if sum(keypoint_anns) > 0 else False
 
     def list_of_dicts_to_dict_of_lists(self, list_of_dicts):
         dict_of_lists = defaultdict(list)
@@ -40,14 +42,19 @@ class CocoKeypoints(data.Dataset):
                 dict_of_lists[key].append(value)
         return dict(dict_of_lists)
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+    def get_sampler_weights(self, id):
+        target = self._load_target(id)
+        target = [x for x in target if x["num_keypoints"] > 0] 
+        return len(target)
+
+    def __getitem__(self, index):
         id = self.ids[index]
 
         image = self._load_image(id)
         target = self._load_target(id)
+        target = [x for x in target if x["num_keypoints"] > 0]  # remove non-keypoint-annotated targets
         anns = (image.copy(), target)
 
-        target = [x for x in target if x["num_keypoints"] > 0]  # remove non-keypoint-annotated targets
         targ = self.list_of_dicts_to_dict_of_lists(target)
 
         keypoints = np.array(targ["keypoints"]).reshape(-1, 17, 3)

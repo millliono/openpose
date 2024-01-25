@@ -4,15 +4,15 @@ import os
 import pathlib
 import model as mdl
 import torch.nn as nn
-from torch.utils.data import DataLoader
 import transforms as mytf
 from loss import PoseLoss
 from coco_dataset import CocoKeypoints
 from torchvision.transforms import v2
 from coco_eval_model import coco_eval_model
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
-LEARNING_RATE = 5e-5
+LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0
 BATCH_SIZE = 10
 EPOCHS = 400
@@ -105,12 +105,13 @@ def main():
         annFile=str(pathlib.Path("../coco") / "annotations" / "annotations" / "person_keypoints_val2017.json"),
         transform=None)
 
+    sampler = WeightedRandomSampler(train_dataset.sampler_weights, num_samples=len(train_dataset), replacement=True)
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
+        sampler=sampler,
         num_workers=NUM_WORKERS,
         pin_memory=True,
-        shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
     )
@@ -120,7 +121,6 @@ def main():
         batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
         pin_memory=True,
-        shuffle=True,
         drop_last=True,
         collate_fn=collate_fn,
     )
@@ -132,7 +132,7 @@ def main():
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                  lr=LEARNING_RATE,
                                  weight_decay=WEIGHT_DECAY)
-    
+
     for epoch in range(5):
         train_fn(train_loader, model, optimizer, loss_fcn, device, epoch, writer)
         test_fn(test_loader, model, loss_fcn, device, epoch, writer)
@@ -140,7 +140,7 @@ def main():
     # unfreeze vgg19 layers
     for param in model.module.backbone.ten_first_layers.parameters():
         param.requires_grad = True
-    
+
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                  lr=LEARNING_RATE,
                                  weight_decay=WEIGHT_DECAY)
